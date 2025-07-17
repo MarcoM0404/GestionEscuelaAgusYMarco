@@ -28,9 +28,17 @@ public class ProfessorService {
         repo.deleteById(id);
     }
     
+
+    public List<Professor> findByNameContainingIgnoreCase(String txt) {
+        return repo.findByNameContainingIgnoreCase(txt);
+    }
     
+    public Optional<Professor> findByUserId(Long userId) {
+        return repo.findByUserId(userId);
+    }
+
     public Professor save(Professor professor) {
         return repo.save(professor);
     }
-
 }
+

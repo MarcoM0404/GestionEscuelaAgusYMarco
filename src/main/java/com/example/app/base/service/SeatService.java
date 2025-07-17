@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class SeatService {
@@ -32,6 +33,17 @@ public class SeatService {
         return repo.findByCourseId(courseId);
     }
     
+    public List<Seat> findByStudentUserId(Long userId) {
+        return repo.findByStudentUserId(userId);
+    }
+    
+    public List<Seat> findByStudentName(String name) {
+        return repo.findByStudentNameContainingIgnoreCase(name);
+    }
+    
+    public List<Seat> findByStudentNumber(UUID studentNumber) {
+        return repo.findByStudentStudentNumber(studentNumber);
+    }
     
     public Seat save(Seat seat) {
         return repo.save(seat);
