@@ -4,7 +4,6 @@ import com.example.app.base.domain.Professor;
 import com.example.app.base.repository.ProfessorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +28,7 @@ public class ProfessorService {
         repo.deleteById(id);
     }
     
+
     public List<Professor> findByNameContainingIgnoreCase(String txt) {
         return repo.findByNameContainingIgnoreCase(txt);
     }
@@ -36,9 +36,9 @@ public class ProfessorService {
     public Optional<Professor> findByUserId(Long userId) {
         return repo.findByUserId(userId);
     }
-    
+
     public Professor save(Professor professor) {
         return repo.save(professor);
     }
-
 }
+
