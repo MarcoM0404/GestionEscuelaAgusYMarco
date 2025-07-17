@@ -4,7 +4,6 @@ import com.example.app.base.domain.Address;
 import com.example.app.base.repository.AddressRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -15,10 +14,6 @@ public class AddressService {
     @Autowired
     public AddressService(AddressRepository repo) {
         this.repo = repo;
-    }
-
-    public Address save(Address address) {
-        return repo.save(address);
     }
 
     public List<Address> findAll() {
@@ -36,5 +31,9 @@ public class AddressService {
 
     public List<Address> findByCity(String city) {
         return repo.findByCity(city);
+    }
+    
+    public Address save(Address address) {
+        return repo.save(address);
     }
 }

@@ -4,7 +4,6 @@ import com.example.app.base.domain.Seat;
 import com.example.app.base.repository.SeatRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -16,11 +15,7 @@ public class SeatService {
     public SeatService(SeatRepository repo) {
         this.repo = repo;
     }
-
-    public Seat save(Seat seat) {
-        return repo.save(seat);
-    }
-
+    
     public List<Seat> findAll() {
         return repo.findAll();
     }
@@ -36,4 +31,10 @@ public class SeatService {
     public List<Seat> findByCourseId(Long courseId) {
         return repo.findByCourseId(courseId);
     }
+    
+    
+    public Seat save(Seat seat) {
+        return repo.save(seat);
+    }
+
 }
