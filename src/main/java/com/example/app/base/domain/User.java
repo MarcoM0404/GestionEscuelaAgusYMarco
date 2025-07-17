@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "users")
-public class User extends AbstractEntity<Long> {
+public class User {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,7 +30,6 @@ public class User extends AbstractEntity<Long> {
         this.role     = role;
     }
 
-    @Override
     public Long getId() {
         return this.id;
     }

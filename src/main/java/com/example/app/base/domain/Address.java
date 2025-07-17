@@ -4,9 +4,10 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "addresses")
-public class Address extends AbstractEntity<Long> {
+public class Address{
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 100)
@@ -21,7 +22,6 @@ public class Address extends AbstractEntity<Long> {
     @Column(nullable = false, length = 50)
     private String country;
 
-    @Override
     public Long getId() {
         return this.id;
     }

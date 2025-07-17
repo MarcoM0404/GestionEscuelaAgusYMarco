@@ -6,13 +6,12 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "seats")
-public class Seat extends AbstractEntity<Long> {
+public class Seat {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
-	@Override
 	public Long getId() {
 		return id;
 	}
@@ -22,6 +21,8 @@ public class Seat extends AbstractEntity<Long> {
 	
 	@Column(name = "mark")
 	private Double mark;
+	
+	private LocalDate evaluationDate;
 	
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "student_id", nullable = false)
@@ -53,6 +54,14 @@ public class Seat extends AbstractEntity<Long> {
 
 	public void setStudent(Student student) {
 		this.student = student;
+		
+	}
+	
+	public LocalDate getEvaluationDate() {
+		return evaluationDate;
+	}
+	public void setEvaluationDate(LocalDate evaluationDate) {
+		this.evaluationDate = evaluationDate;
 	}
 
 	public Course getCourse() {

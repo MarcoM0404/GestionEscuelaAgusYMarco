@@ -2,6 +2,7 @@ package com.example.app.base.domain;
 
 import java.util.*;
 import jakarta.persistence.*;
+
 @Entity
 @Table(name = "students")
 public class Student extends Person {
@@ -14,6 +15,15 @@ public class Student extends Person {
 	
 	@OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Seat> seats = new ArrayList<>();
+	
+    public Student() {
+        super();  
+    }
+    
+    public Student(UUID studentNumber, Double avgMark) {
+        this.studentNumber = studentNumber;
+        this.avgMark       = avgMark;
+    }
 
 	public UUID getStudentNumber() {
 		return studentNumber;

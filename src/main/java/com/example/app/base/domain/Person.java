@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "persons")
 @Inheritance(strategy = InheritanceType.JOINED)
-public abstract class Person extends AbstractEntity<Long> {
+public abstract class Person {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,7 +27,6 @@ public abstract class Person extends AbstractEntity<Long> {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Override
     public Long getId() {
         return this.id;
     }
