@@ -17,10 +17,6 @@ public class ProfessorService {
         this.repo = repo;
     }
 
-    public Professor save(Professor professor) {
-        return repo.save(professor);
-    }
-
     public List<Professor> findAll() {
         return repo.findAll();
     }
@@ -32,4 +28,17 @@ public class ProfessorService {
     public void deleteById(Long id) {
         repo.deleteById(id);
     }
+    
+    public List<Professor> findByNameContainingIgnoreCase(String txt) {
+        return repo.findByNameContainingIgnoreCase(txt);
+    }
+    
+    public Optional<Professor> findByUserId(Long userId) {
+        return repo.findByUserId(userId);
+    }
+    
+    public Professor save(Professor professor) {
+        return repo.save(professor);
+    }
+
 }

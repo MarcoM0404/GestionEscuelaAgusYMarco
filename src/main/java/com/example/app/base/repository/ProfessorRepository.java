@@ -9,5 +9,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProfessorRepository extends JpaRepository<Professor, Long> {
     Optional<Professor> findByUserId(Long userId);
-    List<Professor> findBySalaryGreaterThan(Double minSalary);
+    List<Professor> findByNameContainingIgnoreCase(String name);
 }

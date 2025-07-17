@@ -29,7 +29,14 @@ public class StudentService {
         repo.deleteById(id);
     }
 
-
+    public Optional<Student> findByUserId(Long userId) {
+        return repo.findByUserId(userId);
+    }
+    
+    public List<Student> findByNameContainingIgnoreCase(String name) {
+        return repo.findByNameContainingIgnoreCase(name);
+    }
+    
     public Student save(Student student) {
         return repo.save(student);
     }

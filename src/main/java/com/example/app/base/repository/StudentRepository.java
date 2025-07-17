@@ -9,5 +9,5 @@ import java.util.Optional;
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
     Optional<Student> findByUserId(Long userId);
-    List<Student> findBySeatsCourseId(Long courseId);
+    List<Student> findByNameContainingIgnoreCase(String name);
 }
