@@ -1,14 +1,14 @@
 package com.example.app;
 
-import org.springframework.boot.SpringApplication;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 
-/**
- * Run this application class to start your application locally, using Testcontainers for all external services. You
- * have to configure the containers in {@link TestcontainersConfiguration}.
- */
-public class TestApplication {
+@SpringBootTest
+class TestApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.from(Application::main).with(TestcontainersConfiguration.class).run(args);
-    }
+	@Test
+	void contextLoads() {
+	}
+
 }
+
