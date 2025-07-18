@@ -2,6 +2,7 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -22,34 +23,46 @@ public class AdminAdminsView extends VerticalLayout {
     private final AdministratorService adminService;
     private final PasswordEncoder      encoder;
 
-    private final Grid<Administrator> grid = new Grid<>(Administrator.class, false);
+    private final Grid<Administrator> grid   = new Grid<>(Administrator.class, false);
+    private final TextField           filter = new TextField();
 
     public AdminAdminsView(UserService userService,
                            AdministratorService adminService,
                            PasswordEncoder encoder) {
+
         this.userService  = userService;
         this.adminService = adminService;
         this.encoder      = encoder;
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
-            getUI().ifPresent(ui -> ui.navigate("login"));
+            UI.getCurrent().navigate("login");
             return;
         }
 
         setSizeFull();
-        add(
-            new H2("👑 Gestión de Administradores"),
-            new Button("➕ Nuevo Admin", e -> openEditor(new Administrator(), true))
-        );
+
+        H2 title = new H2("👑 Gestión de Administradores");
+
+        Button addBtn = new Button("➕ Nuevo Admin",
+                                   e -> openEditor(new Administrator(), true));
+
+        filter.setPlaceholder("Buscar admin…");
+        filter.setClearButtonVisible(true);
+        filter.addValueChangeListener(e -> applyFilter(e.getValue()));
+
+        HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
+        header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        header.expand(title);
+
+        add(header);
 
         configureGrid();
         add(grid);
-        refreshGrid();
+        applyFilter("");
     }
 
     private void configureGrid() {
-
         grid.addColumn(a -> {
             User u = a.getUser();
             return u != null ? u.getId() : "";
@@ -65,14 +78,12 @@ public class AdminAdminsView extends VerticalLayout {
         grid.setSizeFull();
 
         grid.asSingleSelect().addValueChangeListener(ev -> {
-            if (ev.getValue() != null) {
-                openEditor(ev.getValue(), false);
-            }
+            if (ev.getValue() != null) openEditor(ev.getValue(), false);
         });
     }
 
-    private void refreshGrid() {
-        grid.setItems(adminService.findAll());
+    private void applyFilter(String term){
+        grid.setItems(adminService.search(term));
     }
 
     private void openEditor(Administrator admin, boolean isNew) {
@@ -122,19 +133,16 @@ public class AdminAdminsView extends VerticalLayout {
                 }
 
                 adminService.save(admin);
-                refreshGrid();
+                applyFilter(filter.getValue());
                 dialog.close();
             }
         });
-
         Button cancel = new Button("Cancelar", e -> dialog.close());
 
-        dialog.add(
-            new VerticalLayout(
+        dialog.add(new VerticalLayout(
                 usern, pass, name, email,
                 new HorizontalLayout(save, cancel)
-            )
-        );
+        ));
         dialog.open();
     }
 }
