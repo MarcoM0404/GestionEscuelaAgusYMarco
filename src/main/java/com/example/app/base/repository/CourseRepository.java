@@ -7,5 +7,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CourseRepository extends JpaRepository<Course, Long> {
+
     List<Course> findByProfessorId(Long professorId);
+
+    // 👉 Nuevo: búsqueda por nombre (case-insensitive)
+    List<Course> findByNameContainingIgnoreCase(String name);
 }

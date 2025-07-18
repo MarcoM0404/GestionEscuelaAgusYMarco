@@ -2,7 +2,6 @@ package com.example.app.base.service;
 
 import com.example.app.base.domain.Course;
 import com.example.app.base.repository.CourseRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -12,29 +11,20 @@ public class CourseService {
 
     private final CourseRepository repo;
 
-    @Autowired
     public CourseService(CourseRepository repo) {
         this.repo = repo;
     }
 
-    public List<Course> findAll() {
-        return repo.findAll();
-    }
+    public List<Course> findAll()                 { return repo.findAll(); }
+    public Optional<Course> findById(Long id)     { return repo.findById(id); }
+    public void deleteById(Long id)               { repo.deleteById(id); }
+    public Course save(Course course)             { return repo.save(course); }
 
-    public Optional<Course> findById(Long id) {
-        return repo.findById(id);
-    }
+    public List<Course> findByProfessorId(Long id){ return repo.findByProfessorId(id); }
 
-    public void deleteById(Long id) {
-        repo.deleteById(id);
+    public List<Course> search(String term) {
+        return term == null || term.isBlank()
+               ? repo.findAll()
+               : repo.findByNameContainingIgnoreCase(term);
     }
-
-    public List<Course> findByProfessorId(Long professorId) {
-        return repo.findByProfessorId(professorId);
-    }
-    
-    public Course save(Course course) {
-        return repo.save(course);
-    }
-
 }

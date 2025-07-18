@@ -19,49 +19,67 @@ public class AdminCoursesView extends VerticalLayout {
 
     private final CourseService    courseService;
     private final ProfessorService profService;
-    private final Grid<Course>     grid = new Grid<>(Course.class, false);
+
+    private final Grid<Course> grid   = new Grid<>(Course.class, false);
+    private final TextField    filter = new TextField();
 
     public AdminCoursesView(CourseService courseService,
                             ProfessorService profService) {
+
         this.courseService = courseService;
         this.profService   = profService;
 
-
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
-            getUI().ifPresent(ui -> ui.navigate("login"));
+        	getUI().ifPresent(ui -> ui.navigate("login"));
             return;
         }
 
         setSizeFull();
-        add(new H2("📚 Gestión de Cursos"),
-            new Button("➕ Nuevo Curso", e -> openEditor(new Course())));
+
+        H2 title = new H2("📚 Gestión de Cursos");
+
+        Button addBtn = new Button("➕ Nuevo Curso",
+                                   e -> openEditor(new Course()));
+
+        filter.setPlaceholder("Buscar curso…");
+        filter.setClearButtonVisible(true);
+        filter.addValueChangeListener(e -> applyFilter(e.getValue()));
+
+        HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
+        header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        header.expand(title);
+
+        add(header);
 
         configureGrid();
         add(grid);
-        refreshGrid();
+        applyFilter(""); 
     }
 
     private void configureGrid() {
         grid.addColumn(Course::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(Course::getName).setHeader("Nombre").setAutoWidth(true);
-        grid.addColumn(c -> {
-            return c.getProfessor() != null
+        grid.addColumn(c -> c.getProfessor() != null
                 ? c.getProfessor().getName()
-                : "(sin prof.)";
-        }).setHeader("Profesor");
+                : "(sin prof.)")
+            .setHeader("Profesor");
 
         grid.setSizeFull();
-
         grid.asSingleSelect().addValueChangeListener(ev -> {
-            if (ev.getValue() != null) {
-                openEditor(ev.getValue());
-            }
+            if (ev.getValue() != null) openEditor(ev.getValue());
         });
     }
 
-    private void refreshGrid() {
-        grid.setItems(courseService.findAll());
+    private void applyFilter(String term) {
+        if (term == null || term.isBlank()) {
+            grid.setItems(courseService.findAll());
+        } else {
+            String t = term.toLowerCase();
+            grid.setItems(courseService.findAll().stream()
+                .filter(c -> c.getName().toLowerCase().contains(t))
+                .toList());
+        }
     }
 
     private void openEditor(Course course) {
@@ -69,7 +87,7 @@ public class AdminCoursesView extends VerticalLayout {
         dialog.setWidth("400px");
 
         Binder<Course> binder = new Binder<>(Course.class);
-        TextField      nameField  = new TextField("Nombre");
+        TextField      nameField   = new TextField("Nombre");
         Select<Professor> profSelect = new Select<>();
 
         binder.forField(nameField)
@@ -87,7 +105,7 @@ public class AdminCoursesView extends VerticalLayout {
         Button save = new Button("Guardar", ev -> {
             if (binder.writeBeanIfValid(course)) {
                 courseService.save(course);
-                refreshGrid();
+                applyFilter(filter.getValue());
                 dialog.close();
             }
         });
