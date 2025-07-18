@@ -40,10 +40,11 @@ public class MainLayout extends AppLayout {
             switch (user.getRole()) {
                 case ADMIN:
                     nav.add(
-                        new RouterLink("Cursos",        AdminCoursesView.class),
-                        new RouterLink("Profesores",    AdminProfessorsView.class),
-                        new RouterLink("Alumnos",       AdminStudentsView.class),
-                        new RouterLink("Inscripciones", AdminEnrollmentsView.class)
+                    	    new RouterLink("Administradores", AdminAdminsView.class),
+                    	    new RouterLink("Cursos",        AdminCoursesView.class),
+                    	    new RouterLink("Profesores",    AdminProfessorsView.class),
+                    	    new RouterLink("Alumnos",       AdminStudentsView.class),
+                    	    new RouterLink("Inscripciones", AdminEnrollmentsView.class)
                     );
                     break;
                 case PROFESSOR:
