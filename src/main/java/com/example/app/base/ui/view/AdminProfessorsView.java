@@ -23,7 +23,8 @@ public class AdminProfessorsView extends VerticalLayout {
     private final UserService      userService;
     private final PasswordEncoder  passwordEncoder;
 
-    private final Grid<Professor>  grid = new Grid<>(Professor.class, false);
+    private final Grid<Professor> grid   = new Grid<>(Professor.class, false);
+    private final TextField       filter = new TextField();
 
     @Autowired
     public AdminProfessorsView(ProfessorService profService,
@@ -36,19 +37,30 @@ public class AdminProfessorsView extends VerticalLayout {
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
-            getUI().ifPresent(ui -> ui.navigate("login"));
+        	getUI().ifPresent(ui -> ui.navigate("login"));
             return;
         }
 
         setSizeFull();
-        add(
-            new H2("👩‍🏫 Gestión de Profesores"),
-            new Button("➕ Nuevo Profesor", e -> openEditor(new Professor()))
-        );
+
+        H2 title = new H2("👩‍🏫 Gestión de Profesores");
+
+        Button addBtn = new Button("➕ Nuevo Profesor",
+                                   e -> openEditor(new Professor()));
+
+        filter.setPlaceholder("Buscar profesor…");
+        filter.setClearButtonVisible(true);
+        filter.addValueChangeListener(e -> applyFilter(e.getValue()));
+
+        HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
+        header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+        header.expand(title);
+
+        add(header);
 
         configureGrid();
         add(grid);
-        refreshGrid();
+        applyFilter("");
     }
 
     private void configureGrid() {
@@ -59,14 +71,20 @@ public class AdminProfessorsView extends VerticalLayout {
         grid.addColumn(Professor::getSalary).setHeader("Salario");
         grid.setSizeFull();
         grid.asSingleSelect().addValueChangeListener(ev -> {
-            if (ev.getValue() != null) {
-                openEditor(ev.getValue());
-            }
+            if (ev.getValue() != null) openEditor(ev.getValue());
         });
     }
 
-    private void refreshGrid() {
-        grid.setItems(profService.findAll());
+    private void applyFilter(String term) {
+        if (term == null || term.isBlank()) {
+            grid.setItems(profService.findAll());
+        } else {
+            String t = term.toLowerCase();
+            grid.setItems(profService.findAll().stream()
+                .filter(p -> p.getName().toLowerCase().contains(t)
+                          || p.getEmail().toLowerCase().contains(t))
+                .toList());
+        }
     }
 
     private void openEditor(Professor prof) {
@@ -97,19 +115,15 @@ public class AdminProfessorsView extends VerticalLayout {
               .bind(Professor::getEmail, Professor::setEmail);
 
         binder.forField(phone).bind(Professor::getPhone, Professor::setPhone);
-
         binder.forField(salary).asRequired("Requerido")
               .bind(Professor::getSalary, Professor::setSalary);
 
         binder.forField(street).bind(p -> p.getAddress().getStreet(),
                                      (p,v) -> p.getAddress().setStreet(v));
-
         binder.forField(city).bind(p -> p.getAddress().getCity(),
                                    (p,v) -> p.getAddress().setCity(v));
-
         binder.forField(state).bind(p -> p.getAddress().getState(),
                                     (p,v) -> p.getAddress().setState(v));
-
         binder.forField(country).bind(p -> p.getAddress().getCountry(),
                                       (p,v) -> p.getAddress().setCountry(v));
 
@@ -131,7 +145,7 @@ public class AdminProfessorsView extends VerticalLayout {
 
                 profService.save(prof);
 
-                refreshGrid();
+                applyFilter(filter.getValue());
                 dialog.close();
                 Notification.show("Profesor guardado");
             }
