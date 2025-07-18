@@ -15,6 +15,7 @@ import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.UUID;
@@ -40,7 +41,6 @@ public class AdminStudentsView extends VerticalLayout {
         this.addressService = addressService;
         this.userService    = userService;
         this.passwordEncoder = passwordEncoder;
-
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
@@ -75,18 +75,15 @@ public class AdminStudentsView extends VerticalLayout {
     }
 
     private void openEditor(Student student) {
-
         if (student.getAddress() == null) {
             student.setAddress(new Address());
         }
         if (student.getUser() == null) {
             student.setUser(new User());
         }
-
         if (student.getStudentNumber() == null) {
             student.setStudentNumber(UUID.randomUUID());
         }
-
 
         Dialog dialog = new Dialog();
         dialog.setWidth("400px");
@@ -123,7 +120,6 @@ public class AdminStudentsView extends VerticalLayout {
               .bind(s -> s.getAddress().getCountry(),
                     (s, v) -> s.getAddress().setCountry(v));
 
-
         binder.forField(username)
               .asRequired("Requerido")
               .bind(s -> s.getUser().getUsername(),
@@ -132,25 +128,36 @@ public class AdminStudentsView extends VerticalLayout {
         binder.readBean(student);
 
         Button save = new Button("Guardar", ev -> {
-            if (binder.writeBeanIfValid(student)) {
+            if (!binder.writeBeanIfValid(student)) {
+                return;
+            }
 
-                User u2 = student.getUser();
-                u2.setRole(Role.STUDENT);
-                if (!password.getValue().isBlank()) {
-                    u2.setPassword(passwordEncoder.encode(password.getValue()));
-                }
-                userService.save(u2);
+            User u2 = student.getUser();
+
+            User existing = userService.findByUsername(u2.getUsername());
+            if (existing != null && (u2.getId() == null || !existing.getId().equals(u2.getId()))) {
+                Notification.show("El nombre de usuario ya existe, elige otro.", 3000, Notification.Position.MIDDLE);
+                return;
+            }
 
 
-                addressService.save(student.getAddress());
-                personService.save(student);
+            u2.setRole(Role.STUDENT);
+            if (!password.getValue().isBlank()) {
+                u2.setPassword(passwordEncoder.encode(password.getValue()));
+            }
+
+            try {
+                User savedUser = userService.save(u2);
+                student.setUser(savedUser);
                 studentService.save(student);
-
                 refreshGrid();
                 dialog.close();
                 Notification.show("Alumno guardado");
+            } catch (DataIntegrityViolationException ex) {
+                Notification.show("Error al guardar: " + ex.getRootCause().getMessage(), 4000, Notification.Position.MIDDLE);
             }
         });
+
         Button cancel = new Button("Cancelar", ev -> dialog.close());
 
         dialog.add(new VerticalLayout(
