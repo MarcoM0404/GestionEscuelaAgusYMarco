@@ -2,6 +2,7 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -35,15 +36,17 @@ public class AdminProfessorsView extends VerticalLayout {
         this.userService     = userService;
         this.passwordEncoder = passwordEncoder;
 
+        /* ---- control acceso ---- */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
-        	getUI().ifPresent(ui -> ui.navigate("login"));
+            UI.getCurrent().navigate("login");
             return;
         }
 
         setSizeFull();
 
-        H2 title = new H2("👩‍🏫 Gestión de Profesores");
+        /* ---------- Encabezado ---------- */
+        H2 title  = new H2("👩‍🏫 Gestión de Profesores");
 
         Button addBtn = new Button("➕ Nuevo Profesor",
                                    e -> openEditor(new Professor()));
@@ -55,14 +58,15 @@ public class AdminProfessorsView extends VerticalLayout {
         HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
-
         add(header);
 
+        /* ---------- Grid ---------- */
         configureGrid();
         add(grid);
         applyFilter("");
     }
 
+    /* ---------- configuración grid ---------- */
     private void configureGrid() {
         grid.addColumn(Professor::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(Professor::getName).setHeader("Nombre");
@@ -70,29 +74,33 @@ public class AdminProfessorsView extends VerticalLayout {
         grid.addColumn(Professor::getPhone).setHeader("Teléfono");
         grid.addColumn(Professor::getSalary).setHeader("Salario");
         grid.setSizeFull();
-        grid.asSingleSelect().addValueChangeListener(ev -> {
-            if (ev.getValue() != null) openEditor(ev.getValue());
-        });
+
+        /* doble-clic abre formulario */
+        grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
+    /* ---------- filtro ---------- */
     private void applyFilter(String term) {
-        if (term == null || term.isBlank()) {
-            grid.setItems(profService.findAll());
-        } else {
-            String t = term.toLowerCase();
-            grid.setItems(profService.findAll().stream()
-                .filter(p -> p.getName().toLowerCase().contains(t)
-                          || p.getEmail().toLowerCase().contains(t))
-                .toList());
-        }
+        grid.setItems(term == null || term.isBlank()
+            ? profService.findAll()
+            : profService.search(term));
     }
 
-    private void openEditor(Professor prof) {
+    /* ---------- Editor ---------- */
+    private void openEditor(Professor selected) {
 
-        if (prof.getAddress() == null)  prof.setAddress(new Address());
-        if (prof.getUser()    == null)  prof.setUser(new User());
+        /* Recarga con JOIN FETCH si ya existe */
+        Professor loaded = selected.getId() != null
+                ? profService.findWithUserById(selected.getId()).orElse(selected)
+                : selected;
+
+        final Professor prof = loaded;            // 👉 effectively final para usar en lambdas
+
+        if (prof.getAddress() == null) prof.setAddress(new Address());
+        if (prof.getUser()    == null) prof.setUser(new User());
 
         Dialog dialog = new Dialog();
+        dialog.setHeaderTitle((prof.getId() == null ? "Nuevo" : "Editar") + " profesor");
         dialog.setWidth("400px");
 
         Binder<Professor> binder = new Binder<>(Professor.class);
@@ -101,13 +109,15 @@ public class AdminProfessorsView extends VerticalLayout {
         TextField     email    = new TextField("Email");
         TextField     phone    = new TextField("Teléfono");
         NumberField   salary   = new NumberField("Salario");
-        TextField     username = new TextField("Username");
-        PasswordField password = new PasswordField("Password");
-        TextField     street   = new TextField("Calle");
-        TextField     city     = new TextField("Ciudad");
-        TextField     state    = new TextField("Provincia");
-        TextField     country  = new TextField("País");
+        TextField     username = new TextField("Usuario");
+        PasswordField password = new PasswordField("Contraseña");
 
+        TextField street  = new TextField("Calle");
+        TextField city    = new TextField("Ciudad");
+        TextField state   = new TextField("Provincia");
+        TextField country = new TextField("País");
+
+        /* ---- bindings ---- */
         binder.forField(name).asRequired("Requerido")
               .bind(Professor::getName, Professor::setName);
 
@@ -115,6 +125,7 @@ public class AdminProfessorsView extends VerticalLayout {
               .bind(Professor::getEmail, Professor::setEmail);
 
         binder.forField(phone).bind(Professor::getPhone, Professor::setPhone);
+
         binder.forField(salary).asRequired("Requerido")
               .bind(Professor::getSalary, Professor::setSalary);
 
@@ -133,16 +144,17 @@ public class AdminProfessorsView extends VerticalLayout {
 
         binder.readBean(prof);
 
+        /* ---- botones ---- */
         Button save = new Button("Guardar", ev -> {
             if (binder.writeBeanIfValid(prof)) {
 
-                User user = prof.getUser();
-                user.setRole(Role.PROFESSOR);
-                if (!password.getValue().isBlank()) {
-                    user.setPassword(passwordEncoder.encode(password.getValue()));
-                }
-                userService.save(user);
+                User usr = prof.getUser();
+                usr.setRole(Role.PROFESSOR);
 
+                if (!password.getValue().isBlank()) {
+                    usr.setPassword(passwordEncoder.encode(password.getValue()));
+                }
+                userService.save(usr);
                 profService.save(prof);
 
                 applyFilter(filter.getValue());
@@ -150,15 +162,16 @@ public class AdminProfessorsView extends VerticalLayout {
                 Notification.show("Profesor guardado");
             }
         });
+        Button cancel = new Button("Cerrar", e -> dialog.close());
 
-        Button cancel = new Button("Cancelar", ev -> dialog.close());
-
-        dialog.add(new VerticalLayout(
-            name, email, phone, salary,
-            username, password,
-            street, city, state, country,
-            new HorizontalLayout(save, cancel)
-        ));
+        dialog.add(
+            new VerticalLayout(
+                name, email, phone, salary,
+                username, password,
+                street, city, state, country,
+                new HorizontalLayout(save, cancel)
+            )
+        );
         dialog.open();
     }
 }
