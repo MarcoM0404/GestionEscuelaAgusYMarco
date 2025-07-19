@@ -2,6 +2,7 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -9,8 +10,7 @@ import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.PasswordField;
-import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
@@ -47,7 +47,7 @@ public class AdminStudentsView extends VerticalLayout {
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
-        	getUI().ifPresent(ui -> ui.navigate("login"));
+            UI.getCurrent().navigate("login");
             return;
         }
 
@@ -79,29 +79,29 @@ public class AdminStudentsView extends VerticalLayout {
         grid.addColumn(Student::getEmail).setHeader("Email");
         grid.addColumn(Student::getStudentNumber).setHeader("Matrícula");
         grid.setSizeFull();
-        grid.asSingleSelect().addValueChangeListener(evt -> {
-            if (evt.getValue() != null) openEditor(evt.getValue());
-        });
+
+        grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
     private void applyFilter(String term) {
-        if (term == null || term.isBlank()) {
-            grid.setItems(studentService.findAll());
-        } else {
-            String t = term.toLowerCase();
-            grid.setItems(studentService.findAll().stream()
-                .filter(s -> s.getName().toLowerCase().contains(t)
-                          || s.getEmail().toLowerCase().contains(t))
-                .toList());
-        }
+        grid.setItems(studentService.search(term));
     }
 
-    private void openEditor(Student student) {
+    private void openEditor(Student selected) {
+
+        Student loaded = selected.getId() != null
+                ? studentService.findWithUserById(selected.getId()).orElse(selected)
+                : selected;
+
+        final Student student = loaded;
+
         if (student.getAddress() == null)  student.setAddress(new Address());
         if (student.getUser()    == null)  student.setUser(new User());
-        if (student.getStudentNumber() == null) student.setStudentNumber(UUID.randomUUID());
+        if (student.getStudentNumber() == null)
+            student.setStudentNumber(UUID.randomUUID());
 
         Dialog dialog = new Dialog();
+        dialog.setHeaderTitle((student.getId() == null ? "Nuevo" : "Editar") + " alumno");
         dialog.setWidth("400px");
 
         Binder<Student> binder = new Binder<>(Student.class);
@@ -109,8 +109,8 @@ public class AdminStudentsView extends VerticalLayout {
         TextField     name      = new TextField("Nombre");
         TextField     email     = new TextField("Email");
         TextField     phone     = new TextField("Teléfono");
-        TextField     username  = new TextField("Username");
-        PasswordField password  = new PasswordField("Password");
+        TextField     username  = new TextField("Usuario");
+        PasswordField password  = new PasswordField("Contraseña");
         TextField     street    = new TextField("Calle");
         TextField     city      = new TextField("Ciudad");
         TextField     state     = new TextField("Provincia");
@@ -120,7 +120,8 @@ public class AdminStudentsView extends VerticalLayout {
               .bind(Student::getName, Student::setName);
         binder.forField(email).asRequired("Requerido")
               .bind(Student::getEmail, Student::setEmail);
-        binder.forField(phone).bind(Student::getPhone, Student::setPhone);
+        binder.forField(phone)
+              .bind(Student::getPhone, Student::setPhone);
 
         binder.forField(street).bind(s -> s.getAddress().getStreet(),
                                      (s,v) -> s.getAddress().setStreet(v));
@@ -140,21 +141,23 @@ public class AdminStudentsView extends VerticalLayout {
         Button save = new Button("Guardar", ev -> {
             if (!binder.writeBeanIfValid(student)) return;
 
-            User u2 = student.getUser();
-            User existing = userService.findByUsername(u2.getUsername());
-            if (existing != null && (u2.getId() == null || !existing.getId().equals(u2.getId()))) {
-                Notification.show("El nombre de usuario ya existe, elige otro.", 3000,
-                                  Notification.Position.MIDDLE);
+            User usr = student.getUser();
+            User existing = userService.findByUsername(usr.getUsername());
+            if (existing != null && (usr.getId() == null
+                    || !existing.getId().equals(usr.getId()))) {
+                Notification.show("El nombre de usuario ya existe, elige otro.",
+                                  3000, Notification.Position.MIDDLE);
                 return;
             }
 
-            u2.setRole(Role.STUDENT);
+            usr.setRole(Role.STUDENT);
+
             if (!password.getValue().isBlank()) {
-                u2.setPassword(passwordEncoder.encode(password.getValue()));
+                usr.setPassword(passwordEncoder.encode(password.getValue()));
             }
 
             try {
-                User savedUser = userService.save(u2);
+                User savedUser = userService.save(usr);
                 student.setUser(savedUser);
                 studentService.save(student);
                 applyFilter(filter.getValue());
@@ -162,12 +165,12 @@ public class AdminStudentsView extends VerticalLayout {
                 Notification.show("Alumno guardado");
             } catch (DataIntegrityViolationException ex) {
                 Notification.show("Error al guardar: "
-                                  + ex.getRootCause().getMessage(), 4000,
-                                  Notification.Position.MIDDLE);
+                        + ex.getRootCause().getMessage(),
+                        4000, Notification.Position.MIDDLE);
             }
         });
 
-        Button cancel = new Button("Cancelar", ev -> dialog.close());
+        Button cancel = new Button("Cancelar", e -> dialog.close());
 
         dialog.add(new VerticalLayout(
             name, email, phone,

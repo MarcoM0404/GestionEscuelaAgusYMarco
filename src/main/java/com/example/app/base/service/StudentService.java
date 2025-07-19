@@ -22,6 +22,10 @@ public class StudentService {
 
     public Optional<Student> findByUserId(Long id)   { return repo.findByUserId(id); }
 
+    public Optional<Student> findWithUserById(Long id) {
+        return repo.findWithUserById(id);
+    }
+
     public List<Student> search(String term) {
         return term == null || term.isBlank()
                ? repo.findAll()

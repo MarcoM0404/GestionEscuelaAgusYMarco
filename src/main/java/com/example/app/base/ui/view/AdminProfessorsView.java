@@ -36,7 +36,6 @@ public class AdminProfessorsView extends VerticalLayout {
         this.userService     = userService;
         this.passwordEncoder = passwordEncoder;
 
-        /* ---- control acceso ---- */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -45,7 +44,6 @@ public class AdminProfessorsView extends VerticalLayout {
 
         setSizeFull();
 
-        /* ---------- Encabezado ---------- */
         H2 title  = new H2("👩‍🏫 Gestión de Profesores");
 
         Button addBtn = new Button("➕ Nuevo Profesor",
@@ -60,13 +58,11 @@ public class AdminProfessorsView extends VerticalLayout {
         header.expand(title);
         add(header);
 
-        /* ---------- Grid ---------- */
         configureGrid();
         add(grid);
         applyFilter("");
     }
 
-    /* ---------- configuración grid ---------- */
     private void configureGrid() {
         grid.addColumn(Professor::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(Professor::getName).setHeader("Nombre");
@@ -75,21 +71,17 @@ public class AdminProfessorsView extends VerticalLayout {
         grid.addColumn(Professor::getSalary).setHeader("Salario");
         grid.setSizeFull();
 
-        /* doble-clic abre formulario */
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
-    /* ---------- filtro ---------- */
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
             ? profService.findAll()
             : profService.search(term));
     }
 
-    /* ---------- Editor ---------- */
     private void openEditor(Professor selected) {
 
-        /* Recarga con JOIN FETCH si ya existe */
         Professor loaded = selected.getId() != null
                 ? profService.findWithUserById(selected.getId()).orElse(selected)
                 : selected;
@@ -117,7 +109,6 @@ public class AdminProfessorsView extends VerticalLayout {
         TextField state   = new TextField("Provincia");
         TextField country = new TextField("País");
 
-        /* ---- bindings ---- */
         binder.forField(name).asRequired("Requerido")
               .bind(Professor::getName, Professor::setName);
 
@@ -144,7 +135,6 @@ public class AdminProfessorsView extends VerticalLayout {
 
         binder.readBean(prof);
 
-        /* ---- botones ---- */
         Button save = new Button("Guardar", ev -> {
             if (binder.writeBeanIfValid(prof)) {
 

@@ -12,14 +12,12 @@ import java.util.Optional;
 @Repository
 public interface ProfessorRepository extends JpaRepository<Professor, Long> {
 
-    /* ------ búsquedas existentes ------ */
     Optional<Professor> findByUserId(Long userId);
     List<Professor> findByNameContainingIgnoreCase(String name);
     List<Professor> findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
         String name, String email
     );
 
-    /* ------ NUEVO: cargar el User con JOIN FETCH ------ */
     @Query("""
            SELECT p
            FROM Professor p

@@ -16,21 +16,17 @@ public class ProfessorService {
         this.repo = repo;
     }
 
-    /* CRUD básicos */
     public List<Professor> findAll()                  { return repo.findAll(); }
     public Optional<Professor> findById(Long id)      { return repo.findById(id); }
     public void deleteById(Long id)                   { repo.deleteById(id); }
     public Professor save(Professor professor)        { return repo.save(professor); }
 
-    /* Búsquedas personalizadas */
     public Optional<Professor> findByUserId(Long id)  { return repo.findByUserId(id); }
 
-    /* 👉 NUEVO: traer profesor + user (JOIN FETCH) */
     public Optional<Professor> findWithUserById(Long id) {
         return repo.findWithUserById(id);
     }
 
-    /* Filtro de la vista */
     public List<Professor> search(String term) {
         return term == null || term.isBlank()
                ? repo.findAll()
