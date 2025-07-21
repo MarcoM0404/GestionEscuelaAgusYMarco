@@ -8,11 +8,11 @@ import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
@@ -68,6 +68,7 @@ public class AdminProfessorsView extends VerticalLayout {
         applyFilter("");
     }
 
+    /* -------------------------- LISTADO -------------------------- */
 
     private void configureGrid() {
         grid.addColumn(Professor::getId).setHeader("ID").setWidth("70px");
@@ -88,13 +89,13 @@ public class AdminProfessorsView extends VerticalLayout {
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
-
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
             ? profService.findAll()
             : profService.search(term));
     }
 
+    /* -------------------------- FORMULARIO -------------------------- */
 
     private void openEditor(Professor selected) {
 
@@ -110,15 +111,17 @@ public class AdminProfessorsView extends VerticalLayout {
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle((prof.getId() == null ? "Nuevo" : "Editar")
                               + " profesor");
-        dialog.setWidth("400px");
+        dialog.setWidth("50%");      // ⇽⇽ 50 % de la pantalla
+        dialog.setMaxWidth("800px"); //    (límite opcional)
 
         Binder<Professor> binder = new Binder<>(Professor.class);
 
-        TextField     name     = new TextField("Nombre");
-        TextField     email    = new TextField("Email");
-        TextField     phone    = new TextField("Teléfono");
-        NumberField   salary   = new NumberField("Salario");
-        TextField     username = new TextField("Usuario");
+        // ----------- campos -----------
+        TextField   name     = new TextField("Nombre");
+        TextField   email    = new TextField("Email");
+        TextField   phone    = new TextField("Teléfono");
+        NumberField salary   = new NumberField("Salario");
+        TextField   username = new TextField("Usuario");
         PasswordField password = new PasswordField("Contraseña");
 
         TextField street  = new TextField("Calle");
@@ -126,7 +129,7 @@ public class AdminProfessorsView extends VerticalLayout {
         TextField state   = new TextField("Provincia");
         TextField country = new TextField("País");
 
-        /* bindings */
+        // ----------- binder -----------
         binder.forField(name).asRequired("Requerido")
               .bind(Professor::getName, Professor::setName);
         binder.forField(email).asRequired("Requerido")
@@ -150,6 +153,7 @@ public class AdminProfessorsView extends VerticalLayout {
 
         binder.readBean(prof);
 
+        // ----------- acciones -----------
         Button save = new Button("Guardar", ev -> {
             if (binder.writeBeanIfValid(prof)) {
 
@@ -169,15 +173,39 @@ public class AdminProfessorsView extends VerticalLayout {
         });
         Button cancel = new Button("Cerrar", e -> dialog.close());
 
-        dialog.add(new VerticalLayout(
-            name, email, phone, salary,
-            username, password,
-            street, city, state, country,
-            new HorizontalLayout(save, cancel)
-        ));
+        /* ------------------- LAYOUT EN 3 COLUMNAS ------------------- */
+
+        // Columna 1 (email, usuario, contraseña)
+        VerticalLayout col1 = new VerticalLayout(email, username, password);
+        col1.setPadding(false);
+        col1.setSpacing(false);
+
+        // Columna 2 (nombre, teléfono, salario)
+        VerticalLayout col2 = new VerticalLayout(name, phone, salary);
+        col2.setPadding(false);
+        col2.setSpacing(false);
+
+        // Columna 3 (dirección)
+        VerticalLayout col3 = new VerticalLayout(street, city, state, country);
+        col3.setPadding(false);
+        col3.setSpacing(false);
+
+        HorizontalLayout columns = new HorizontalLayout(col1, col2, col3);
+        columns.setWidthFull();
+        columns.setSpacing(true);
+        columns.setPadding(false);
+        columns.setAlignItems(Alignment.START);
+        columns.setFlexGrow(1, col1, col2, col3);
+
+        HorizontalLayout actions = new HorizontalLayout(save, cancel);
+        actions.setWidthFull();
+        actions.setJustifyContentMode(JustifyContentMode.END);
+
+        dialog.add(columns, actions);
         dialog.open();
     }
 
+    /* -------------------------- BORRADO -------------------------- */
 
     private void confirmDeleteProfessor(Professor prof) {
 
