@@ -31,9 +31,6 @@ public class AdminProfessorsView extends VerticalLayout {
     private final Grid<Professor> grid   = new Grid<>(Professor.class, false);
     private final TextField       filter = new TextField();
 
-    /* ====================================================== */
-    /* Constructor                                            */
-    /* ====================================================== */
     @Autowired
     public AdminProfessorsView(ProfessorService profService,
                                UserService userService,
@@ -43,7 +40,6 @@ public class AdminProfessorsView extends VerticalLayout {
         this.userService     = userService;
         this.passwordEncoder = passwordEncoder;
 
-        /* control acceso */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -52,7 +48,6 @@ public class AdminProfessorsView extends VerticalLayout {
 
         setSizeFull();
 
-        /* encabezado */
         H2 title  = new H2("👩‍🏫 Gestión de Profesores");
 
         Button addBtn = new Button("➕ Nuevo Profesor",
@@ -73,9 +68,7 @@ public class AdminProfessorsView extends VerticalLayout {
         applyFilter("");
     }
 
-    /* ====================================================== */
-    /* Grid                                                   */
-    /* ====================================================== */
+
     private void configureGrid() {
         grid.addColumn(Professor::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(Professor::getName).setHeader("Nombre");
@@ -83,7 +76,6 @@ public class AdminProfessorsView extends VerticalLayout {
         grid.addColumn(Professor::getPhone).setHeader("Teléfono");
         grid.addColumn(Professor::getSalary).setHeader("Salario");
 
-        /* columna eliminar 🗑️ */
         grid.addColumn(new ComponentRenderer<>(prof -> {
             Icon trash = VaadinIcon.TRASH.create();
             trash.getStyle().set("cursor", "pointer")
@@ -96,18 +88,14 @@ public class AdminProfessorsView extends VerticalLayout {
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
-    /* ====================================================== */
-    /* Filtro                                                 */
-    /* ====================================================== */
+
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
             ? profService.findAll()
             : profService.search(term));
     }
 
-    /* ====================================================== */
-    /* Editor de profesor                                     */
-    /* ====================================================== */
+
     private void openEditor(Professor selected) {
 
         Professor loaded = selected.getId() != null
@@ -190,9 +178,7 @@ public class AdminProfessorsView extends VerticalLayout {
         dialog.open();
     }
 
-    /* ====================================================== */
-    /* Confirmación y borrado                                  */
-    /* ====================================================== */
+
     private void confirmDeleteProfessor(Professor prof) {
 
         ConfirmDialog cd = new ConfirmDialog();
@@ -203,8 +189,8 @@ public class AdminProfessorsView extends VerticalLayout {
         cd.setConfirmText("Eliminar");
 
         cd.addConfirmListener(e -> {
-            profService.deleteById(prof.getId());  // borrado
-            applyFilter(filter.getValue());        // refresca grid
+            profService.deleteById(prof.getId());
+            applyFilter(filter.getValue());
         });
         cd.open();
     }

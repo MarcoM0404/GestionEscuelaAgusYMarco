@@ -26,7 +26,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
 
     private final Grid<Seat> grid = new Grid<>(Seat.class, false);
 
-    /* botón que alterna la visibilidad del historial */
     private final Button toggleHistoryBtn = new Button("📑 Ver historial");
 
     public AdminEnrollmentsView(SeatService seatService,
@@ -37,7 +36,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
         this.courseService  = courseService;
         this.studentService = studentService;
 
-        /* --- control de acceso --- */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -46,13 +44,11 @@ public class AdminEnrollmentsView extends VerticalLayout {
 
         setSizeFull();
 
-        /* ---------- encabezado ---------- */
         H2 title = new H2("📝 Gestión de Inscripciones");
 
         Button addBtn = new Button("➕ Nueva inscripción",
                                    e -> openEditor(new Seat()));
 
-        /* alternar historial */
         toggleHistoryBtn.addClickListener(e -> toggleHistory());
 
         HorizontalLayout header = new HorizontalLayout(title, addBtn, toggleHistoryBtn);
@@ -60,13 +56,11 @@ public class AdminEnrollmentsView extends VerticalLayout {
         header.expand(title);
         add(header);
 
-        /* ---------- grid ---------- */
         configureGrid();
-        grid.setVisible(false);          // oculto por defecto
+        grid.setVisible(false);
         add(grid);
     }
 
-    /* ----- grid definition ----- */
     private void configureGrid() {
         grid.addColumn(Seat::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(s -> s.getCourse().getName()).setHeader("Curso");
@@ -76,7 +70,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
 
         grid.setSizeFull();
 
-        /* doble clic opcional para editar */
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
@@ -86,7 +79,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
         }
     }
 
-    /* mostrar / ocultar historial */
     private void toggleHistory() {
         boolean show = !grid.isVisible();
         grid.setVisible(show);
@@ -98,9 +90,7 @@ public class AdminEnrollmentsView extends VerticalLayout {
         }
     }
 
-    /* ----- editor ----- */
     private void openEditor(Seat original) {
-        /* usamos variable efectivamente final dentro del lambda */
         final Seat seat = original;
 
         if (seat.getCourse() == null)  seat.setCourse(new Course());

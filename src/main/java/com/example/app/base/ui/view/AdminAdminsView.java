@@ -35,7 +35,6 @@ public class AdminAdminsView extends VerticalLayout {
         this.adminService = adminService;
         this.encoder      = encoder;
 
-        /* ---- control acceso ---- */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -44,7 +43,6 @@ public class AdminAdminsView extends VerticalLayout {
 
         setSizeFull();
 
-        /* ---------- Encabezado ---------- */
         H2 title = new H2("👑 Gestión de Administradores");
 
         Button addBtn = new Button("➕ Nuevo Admin",
@@ -59,20 +57,17 @@ public class AdminAdminsView extends VerticalLayout {
         header.expand(title);
         add(header);
 
-        /* ---------- Grid ---------- */
         configureGrid();
         add(grid);
         applyFilter("");
     }
 
-    /* ───────── GRID ───────────────────────────────────────────────────────── */
     private void configureGrid() {
         grid.addColumn(a -> a.getUser().getId())   .setHeader("ID").setWidth("70px");
         grid.addColumn(a -> a.getUser().getUsername()).setHeader("Usuario").setAutoWidth(true);
         grid.addColumn(Person::getName)            .setHeader("Nombre");
         grid.addColumn(Person::getEmail)           .setHeader("Email");
 
-        /* 🗑️ columna eliminar */
         grid.addComponentColumn(admin -> {
             Button trash = new Button(VaadinIcon.TRASH.create(), click -> {
                 adminService.deleteById(admin.getId());
@@ -87,7 +82,6 @@ public class AdminAdminsView extends VerticalLayout {
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem(), false));
     }
 
-    /* ───────── FILTRO ─────────────────────────────────────────────────────── */
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
             ? adminService.findAll()
@@ -98,7 +92,6 @@ public class AdminAdminsView extends VerticalLayout {
                   .toList());
     }
 
-    /* ───────── EDITOR ─────────────────────────────────────────────────────── */
     private void openEditor(Administrator admin, boolean isNew) {
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle((isNew ? "Nuevo" : "Editar") + " administrador");
@@ -122,7 +115,6 @@ public class AdminAdminsView extends VerticalLayout {
 
         binder.readBean(admin);
 
-        /* ----- Botón Guardar ----- */
         Button save = new Button("Guardar", e -> {
             if (binder.writeBeanIfValid(admin)) {
 
@@ -149,7 +141,6 @@ public class AdminAdminsView extends VerticalLayout {
 
                 adminService.save(admin);
 
-                /* 👉 refresca la tabla */
                 applyFilter(filter.getValue());
                 dialog.close();
             }

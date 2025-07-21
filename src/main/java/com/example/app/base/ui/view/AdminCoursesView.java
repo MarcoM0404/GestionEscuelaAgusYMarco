@@ -24,18 +24,13 @@ import com.vaadin.flow.server.VaadinSession;
 @Route(value = "admin/courses", layout = MainLayout.class)
 public class AdminCoursesView extends VerticalLayout {
 
-    /* ---------- services ---------- */
     private final CourseService    courseService;
     private final ProfessorService profService;
     private final SeatService      seatService;
 
-    /* ---------- UI ---------- */
     private final Grid<Course> grid   = new Grid<>(Course.class, false);
     private final TextField    filter = new TextField();
 
-    /* =========================================================== */
-    /* Constructor                                                 */
-    /* =========================================================== */
     public AdminCoursesView(CourseService courseService,
                             ProfessorService profService,
                             SeatService seatService) {
@@ -44,7 +39,6 @@ public class AdminCoursesView extends VerticalLayout {
         this.profService   = profService;
         this.seatService   = seatService;
 
-        /* control de acceso */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -53,7 +47,6 @@ public class AdminCoursesView extends VerticalLayout {
 
         setSizeFull();
 
-        /* encabezado */
         H2 title = new H2("📚 Gestión de Cursos");
 
         Button addBtn = new Button("➕ Nuevo Curso",
@@ -68,15 +61,11 @@ public class AdminCoursesView extends VerticalLayout {
         header.expand(title);
         add(header);
 
-        /* grid */
         configureGrid();
         add(grid);
         applyFilter("");
     }
 
-    /* =========================================================== */
-    /* Configuración del grid                                      */
-    /* =========================================================== */
     private void configureGrid() {
 
         grid.addColumn(Course::getId)
@@ -93,7 +82,6 @@ public class AdminCoursesView extends VerticalLayout {
         grid.addColumn(c -> seatService.countByCourseId(c.getId()))
             .setHeader("Inscriptos").setWidth("120px");
 
-        /* columna eliminar curso */
         grid.addColumn(new ComponentRenderer<>(course -> {
             Icon trash = VaadinIcon.TRASH.create();
             trash.getStyle().set("cursor", "pointer")
@@ -107,18 +95,12 @@ public class AdminCoursesView extends VerticalLayout {
         grid.addItemDoubleClickListener(e -> openSeatsDialog(e.getItem()));
     }
 
-    /* =========================================================== */
-    /* Filtro                                                      */
-    /* =========================================================== */
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
             ? courseService.findAll()
             : courseService.search(term));
     }
 
-    /* =========================================================== */
-    /* Editor de curso                                             */
-    /* =========================================================== */
     private void openEditor(Course course) {
         Dialog dialog = new Dialog();
         dialog.setWidth("400px");
@@ -154,9 +136,6 @@ public class AdminCoursesView extends VerticalLayout {
         dialog.open();
     }
 
-    /* =========================================================== */
-    /* Diálogo con lista de inscriptos                             */
-    /* =========================================================== */
     private void openSeatsDialog(Course course) {
 
         Dialog dlg = new Dialog();
@@ -164,7 +143,6 @@ public class AdminCoursesView extends VerticalLayout {
         dlg.setWidth("50vw");
         dlg.setHeight("50vh");
 
-        /* profesor */
         String profesor = course.getProfessor() != null
                           ? course.getProfessor().getName()
                           : "(sin profesor)";
@@ -172,7 +150,6 @@ public class AdminCoursesView extends VerticalLayout {
         profLabel.getStyle().set("font-weight", "600")
                             .set("margin-bottom", "var(--lumo-space-s)");
 
-        /* grid de inscriptos */
         Grid<Seat> seatsGrid = new Grid<>(Seat.class, false);
 
         seatsGrid.addColumn(s -> s.getStudent().getName())
@@ -181,15 +158,12 @@ public class AdminCoursesView extends VerticalLayout {
         seatsGrid.addColumn(s -> s.getMark() != null ? s.getMark() : "-")
                  .setHeader("Nota").setWidth("120px");
 
-        /* columna acciones (editar nota / eliminar) */
         seatsGrid.addColumn(new ComponentRenderer<>(seat -> {
 
-            /* editar nota */
             Icon edit = VaadinIcon.EDIT.create();
             edit.getStyle().set("cursor", "pointer");
             edit.addClickListener(e -> openEditMarkDialog(seat, seatsGrid));
 
-            /* eliminar */
             Icon trash = VaadinIcon.TRASH.create();
             trash.getStyle().set("color", "var(--lumo-error-color)")
                              .set("cursor", "pointer");
@@ -219,9 +193,6 @@ public class AdminCoursesView extends VerticalLayout {
         dlg.open();
     }
 
-    /* =========================================================== */
-    /* Mini-diálogo para editar la nota                            */
-    /* =========================================================== */
     private void openEditMarkDialog(Seat seat, Grid<Seat> seatsGrid) {
 
         Dialog d = new Dialog();
@@ -244,9 +215,6 @@ public class AdminCoursesView extends VerticalLayout {
         d.open();
     }
 
-    /* =========================================================== */
-    /* Confirmar y borrar Seat                                     */
-    /* =========================================================== */
     private void confirmDeleteSeat(Seat seat, Grid<Seat> seatsGrid) {
 
         ConfirmDialog cd = new ConfirmDialog();
@@ -265,9 +233,6 @@ public class AdminCoursesView extends VerticalLayout {
         cd.open();
     }
 
-    /* =========================================================== */
-    /* Confirmar y borrar Curso                                    */
-    /* =========================================================== */
     private void confirmDeleteCourse(Course course) {
 
         ConfirmDialog cd = new ConfirmDialog();

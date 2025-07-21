@@ -21,24 +21,20 @@ import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.util.UUID;
 
 @Route(value = "admin/students", layout = MainLayout.class)
 public class AdminStudentsView extends VerticalLayout {
 
     private final StudentService   studentService;
-    private final PersonService    personService;   // (no se usa aquí, pero lo mantenemos)
-    private final AddressService   addressService;  // (idem)
+    private final PersonService    personService;
+    private final AddressService   addressService;
     private final UserService      userService;
     private final PasswordEncoder  passwordEncoder;
 
     private final Grid<Student> grid   = new Grid<>(Student.class, false);
     private final TextField     filter = new TextField();
 
-    /* ====================================================== */
-    /* Constructor                                            */
-    /* ====================================================== */
     @Autowired
     public AdminStudentsView(StudentService studentService,
                              PersonService personService,
@@ -52,7 +48,6 @@ public class AdminStudentsView extends VerticalLayout {
         this.userService     = userService;
         this.passwordEncoder = passwordEncoder;
 
-        /* control de acceso */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -61,7 +56,6 @@ public class AdminStudentsView extends VerticalLayout {
 
         setSizeFull();
 
-        /* encabezado */
         H2 title = new H2("👩‍🎓 Gestión de Alumnos");
 
         Button addBtn = new Button("➕ Nuevo Alumno",
@@ -82,9 +76,6 @@ public class AdminStudentsView extends VerticalLayout {
         applyFilter("");
     }
 
-    /* ====================================================== */
-    /* Grid                                                   */
-    /* ====================================================== */
     private void configureGrid() {
 
         grid.addColumn(Student::getId).setHeader("ID").setWidth("70px");
@@ -92,7 +83,6 @@ public class AdminStudentsView extends VerticalLayout {
         grid.addColumn(Student::getEmail).setHeader("Email");
         grid.addColumn(Student::getStudentNumber).setHeader("Matrícula");
 
-        /* columna eliminar 🗑️ */
         grid.addColumn(new ComponentRenderer<>(student -> {
             Icon trash = VaadinIcon.TRASH.create();
             trash.getStyle().set("cursor", "pointer")
@@ -105,16 +95,10 @@ public class AdminStudentsView extends VerticalLayout {
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
-    /* ====================================================== */
-    /* Filtro                                                 */
-    /* ====================================================== */
     private void applyFilter(String term) {
         grid.setItems(studentService.search(term));
     }
 
-    /* ====================================================== */
-    /* Editor de alumno                                       */
-    /* ====================================================== */
     private void openEditor(Student selected) {
 
         Student loaded = selected.getId() != null
@@ -144,7 +128,6 @@ public class AdminStudentsView extends VerticalLayout {
         TextField     state     = new TextField("Provincia");
         TextField     country   = new TextField("País");
 
-        /* bindings */
         binder.forField(name).asRequired("Requerido")
               .bind(Student::getName, Student::setName);
         binder.forField(email).asRequired("Requerido")
@@ -210,9 +193,6 @@ public class AdminStudentsView extends VerticalLayout {
         dialog.open();
     }
 
-    /* ====================================================== */
-    /* Confirmación y borrado                                 */
-    /* ====================================================== */
     private void confirmDeleteStudent(Student student) {
 
         ConfirmDialog cd = new ConfirmDialog();

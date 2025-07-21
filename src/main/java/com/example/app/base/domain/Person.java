@@ -14,24 +14,17 @@ public abstract class Person {
     @Column(nullable = false, unique = true) private String email;
     private String phone;
 
-    /* Address (sin cambios) */
     @OneToOne(fetch = FetchType.EAGER,
               cascade = CascadeType.ALL,
               optional = true)
     @JoinColumn(name = "address_id")
     private Address address;
 
-    /* User — solo propagamos REMOVE */
     @OneToOne(fetch = FetchType.LAZY,
-              cascade = CascadeType.REMOVE,   // ← ya NO incluye PERSIST
-              orphanRemoval = true)           // ← sigue eliminando huérfanos
+              cascade = CascadeType.REMOVE,
+              orphanRemoval = true)
     @JoinColumn(name = "user_id")
     private User user;
-
-    /* getters & setters … */
-    // ...;
-
-    /* ---------- getters / setters ---------- */
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
