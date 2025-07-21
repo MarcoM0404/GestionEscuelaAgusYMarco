@@ -4,14 +4,18 @@ import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +31,9 @@ public class AdminProfessorsView extends VerticalLayout {
     private final Grid<Professor> grid   = new Grid<>(Professor.class, false);
     private final TextField       filter = new TextField();
 
+    /* ====================================================== */
+    /* Constructor                                            */
+    /* ====================================================== */
     @Autowired
     public AdminProfessorsView(ProfessorService profService,
                                UserService userService,
@@ -36,6 +43,7 @@ public class AdminProfessorsView extends VerticalLayout {
         this.userService     = userService;
         this.passwordEncoder = passwordEncoder;
 
+        /* control acceso */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -44,6 +52,7 @@ public class AdminProfessorsView extends VerticalLayout {
 
         setSizeFull();
 
+        /* encabezado */
         H2 title  = new H2("👩‍🏫 Gestión de Profesores");
 
         Button addBtn = new Button("➕ Nuevo Profesor",
@@ -58,41 +67,61 @@ public class AdminProfessorsView extends VerticalLayout {
         header.expand(title);
         add(header);
 
+        /* grid */
         configureGrid();
         add(grid);
         applyFilter("");
     }
 
+    /* ====================================================== */
+    /* Grid                                                   */
+    /* ====================================================== */
     private void configureGrid() {
         grid.addColumn(Professor::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(Professor::getName).setHeader("Nombre");
         grid.addColumn(Professor::getEmail).setHeader("Email");
         grid.addColumn(Professor::getPhone).setHeader("Teléfono");
         grid.addColumn(Professor::getSalary).setHeader("Salario");
-        grid.setSizeFull();
 
+        /* columna eliminar 🗑️ */
+        grid.addColumn(new ComponentRenderer<>(prof -> {
+            Icon trash = VaadinIcon.TRASH.create();
+            trash.getStyle().set("cursor", "pointer")
+                            .set("color", "var(--lumo-error-color)");
+            trash.addClickListener(e -> confirmDeleteProfessor(prof));
+            return trash;
+        })).setHeader("").setAutoWidth(true).setFlexGrow(0);
+
+        grid.setSizeFull();
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
+    /* ====================================================== */
+    /* Filtro                                                 */
+    /* ====================================================== */
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
             ? profService.findAll()
             : profService.search(term));
     }
 
+    /* ====================================================== */
+    /* Editor de profesor                                     */
+    /* ====================================================== */
     private void openEditor(Professor selected) {
 
         Professor loaded = selected.getId() != null
                 ? profService.findWithUserById(selected.getId()).orElse(selected)
                 : selected;
 
-        final Professor prof = loaded;            // 👉 effectively final para usar en lambdas
+        final Professor prof = loaded; // effectively-final
 
         if (prof.getAddress() == null) prof.setAddress(new Address());
         if (prof.getUser()    == null) prof.setUser(new User());
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle((prof.getId() == null ? "Nuevo" : "Editar") + " profesor");
+        dialog.setHeaderTitle((prof.getId() == null ? "Nuevo" : "Editar")
+                              + " profesor");
         dialog.setWidth("400px");
 
         Binder<Professor> binder = new Binder<>(Professor.class);
@@ -109,14 +138,12 @@ public class AdminProfessorsView extends VerticalLayout {
         TextField state   = new TextField("Provincia");
         TextField country = new TextField("País");
 
+        /* bindings */
         binder.forField(name).asRequired("Requerido")
               .bind(Professor::getName, Professor::setName);
-
         binder.forField(email).asRequired("Requerido")
               .bind(Professor::getEmail, Professor::setEmail);
-
         binder.forField(phone).bind(Professor::getPhone, Professor::setPhone);
-
         binder.forField(salary).asRequired("Requerido")
               .bind(Professor::getSalary, Professor::setSalary);
 
@@ -154,14 +181,31 @@ public class AdminProfessorsView extends VerticalLayout {
         });
         Button cancel = new Button("Cerrar", e -> dialog.close());
 
-        dialog.add(
-            new VerticalLayout(
-                name, email, phone, salary,
-                username, password,
-                street, city, state, country,
-                new HorizontalLayout(save, cancel)
-            )
-        );
+        dialog.add(new VerticalLayout(
+            name, email, phone, salary,
+            username, password,
+            street, city, state, country,
+            new HorizontalLayout(save, cancel)
+        ));
         dialog.open();
+    }
+
+    /* ====================================================== */
+    /* Confirmación y borrado                                  */
+    /* ====================================================== */
+    private void confirmDeleteProfessor(Professor prof) {
+
+        ConfirmDialog cd = new ConfirmDialog();
+        cd.setHeader("Eliminar profesor");
+        cd.setText("¿Estás seguro de que deseas eliminar a "
+                   + prof.getName() + "?");
+        cd.setCancelText("Cancelar");
+        cd.setConfirmText("Eliminar");
+
+        cd.addConfirmListener(e -> {
+            profService.deleteById(prof.getId());  // borrado
+            applyFilter(filter.getValue());        // refresca grid
+        });
+        cd.open();
     }
 }

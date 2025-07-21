@@ -4,14 +4,18 @@ import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,14 +28,17 @@ import java.util.UUID;
 public class AdminStudentsView extends VerticalLayout {
 
     private final StudentService   studentService;
-    private final PersonService    personService;
-    private final AddressService   addressService;
+    private final PersonService    personService;   // (no se usa aquí, pero lo mantenemos)
+    private final AddressService   addressService;  // (idem)
     private final UserService      userService;
     private final PasswordEncoder  passwordEncoder;
 
     private final Grid<Student> grid   = new Grid<>(Student.class, false);
     private final TextField     filter = new TextField();
 
+    /* ====================================================== */
+    /* Constructor                                            */
+    /* ====================================================== */
     @Autowired
     public AdminStudentsView(StudentService studentService,
                              PersonService personService,
@@ -45,6 +52,7 @@ public class AdminStudentsView extends VerticalLayout {
         this.userService     = userService;
         this.passwordEncoder = passwordEncoder;
 
+        /* control de acceso */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -53,6 +61,7 @@ public class AdminStudentsView extends VerticalLayout {
 
         setSizeFull();
 
+        /* encabezado */
         H2 title = new H2("👩‍🎓 Gestión de Alumnos");
 
         Button addBtn = new Button("➕ Nuevo Alumno",
@@ -65,28 +74,47 @@ public class AdminStudentsView extends VerticalLayout {
         HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
-
         add(header);
 
+        /* grid */
         configureGrid();
         add(grid);
         applyFilter("");
     }
 
+    /* ====================================================== */
+    /* Grid                                                   */
+    /* ====================================================== */
     private void configureGrid() {
+
         grid.addColumn(Student::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(Student::getName).setHeader("Nombre");
         grid.addColumn(Student::getEmail).setHeader("Email");
         grid.addColumn(Student::getStudentNumber).setHeader("Matrícula");
-        grid.setSizeFull();
 
+        /* columna eliminar 🗑️ */
+        grid.addColumn(new ComponentRenderer<>(student -> {
+            Icon trash = VaadinIcon.TRASH.create();
+            trash.getStyle().set("cursor", "pointer")
+                            .set("color", "var(--lumo-error-color)");
+            trash.addClickListener(e -> confirmDeleteStudent(student));
+            return trash;
+        })).setHeader("").setAutoWidth(true).setFlexGrow(0);
+
+        grid.setSizeFull();
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
+    /* ====================================================== */
+    /* Filtro                                                 */
+    /* ====================================================== */
     private void applyFilter(String term) {
         grid.setItems(studentService.search(term));
     }
 
+    /* ====================================================== */
+    /* Editor de alumno                                       */
+    /* ====================================================== */
     private void openEditor(Student selected) {
 
         Student loaded = selected.getId() != null
@@ -116,6 +144,7 @@ public class AdminStudentsView extends VerticalLayout {
         TextField     state     = new TextField("Provincia");
         TextField     country   = new TextField("País");
 
+        /* bindings */
         binder.forField(name).asRequired("Requerido")
               .bind(Student::getName, Student::setName);
         binder.forField(email).asRequired("Requerido")
@@ -179,5 +208,24 @@ public class AdminStudentsView extends VerticalLayout {
             new HorizontalLayout(save, cancel)
         ));
         dialog.open();
+    }
+
+    /* ====================================================== */
+    /* Confirmación y borrado                                 */
+    /* ====================================================== */
+    private void confirmDeleteStudent(Student student) {
+
+        ConfirmDialog cd = new ConfirmDialog();
+        cd.setHeader("Eliminar alumno");
+        cd.setText("¿Estás seguro de que deseas eliminar a "
+                   + student.getName() + "?");
+        cd.setCancelText("Cancelar");
+        cd.setConfirmText("Eliminar");
+
+        cd.addConfirmListener(e -> {
+            studentService.deleteById(student.getId());
+            applyFilter(filter.getValue());
+        });
+        cd.open();
     }
 }
