@@ -2,17 +2,18 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
+import com.vaadin.flow.component.HasSize;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
@@ -34,6 +35,7 @@ public class AdminStudentsView extends VerticalLayout {
 
     private final Grid<Student> grid   = new Grid<>(Student.class, false);
     private final TextField     filter = new TextField();
+
 
     @Autowired
     public AdminStudentsView(StudentService studentService,
@@ -70,11 +72,11 @@ public class AdminStudentsView extends VerticalLayout {
         header.expand(title);
         add(header);
 
-        /* grid */
         configureGrid();
         add(grid);
         applyFilter("");
     }
+
 
     private void configureGrid() {
 
@@ -99,6 +101,7 @@ public class AdminStudentsView extends VerticalLayout {
         grid.setItems(studentService.search(term));
     }
 
+
     private void openEditor(Student selected) {
 
         Student loaded = selected.getId() != null
@@ -113,27 +116,34 @@ public class AdminStudentsView extends VerticalLayout {
             student.setStudentNumber(UUID.randomUUID());
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle((student.getId() == null ? "Nuevo" : "Editar") + " alumno");
-        dialog.setWidth("400px");
+        dialog.setHeaderTitle((student.getId() == null ? "Nuevo" : "Editar")
+                              + " alumno");
+        dialog.setWidth("50%");
+        dialog.setMaxWidth("800px");
 
         Binder<Student> binder = new Binder<>(Student.class);
 
-        TextField     name      = new TextField("Nombre");
-        TextField     email     = new TextField("Email");
-        TextField     phone     = new TextField("Teléfono");
-        TextField     username  = new TextField("Usuario");
-        PasswordField password  = new PasswordField("Contraseña");
-        TextField     street    = new TextField("Calle");
-        TextField     city      = new TextField("Ciudad");
-        TextField     state     = new TextField("Provincia");
-        TextField     country   = new TextField("País");
+        TextField   name     = new TextField("Nombre");
+        TextField   email    = new TextField("Email");
+        TextField   phone    = new TextField("Teléfono");
+        TextField   username = new TextField("Usuario");
+        PasswordField password = new PasswordField("Contraseña");
+
+        TextField street  = new TextField("Calle");
+        TextField city    = new TextField("Ciudad");
+        TextField state   = new TextField("Provincia");
+        TextField country = new TextField("País");
+
+        for (var f : new HasSize[]{name,email,phone,username,password,
+                                   street,city,state,country}) {
+            f.setWidthFull();
+        }
 
         binder.forField(name).asRequired("Requerido")
               .bind(Student::getName, Student::setName);
         binder.forField(email).asRequired("Requerido")
               .bind(Student::getEmail, Student::setEmail);
-        binder.forField(phone)
-              .bind(Student::getPhone, Student::setPhone);
+        binder.forField(phone).bind(Student::getPhone, Student::setPhone);
 
         binder.forField(street).bind(s -> s.getAddress().getStreet(),
                                      (s,v) -> s.getAddress().setStreet(v));
@@ -181,17 +191,36 @@ public class AdminStudentsView extends VerticalLayout {
                         4000, Notification.Position.MIDDLE);
             }
         });
-
         Button cancel = new Button("Cancelar", e -> dialog.close());
 
-        dialog.add(new VerticalLayout(
-            name, email, phone,
-            username, password,
-            street, city, state, country,
-            new HorizontalLayout(save, cancel)
-        ));
+
+        VerticalLayout col1 = new VerticalLayout(email, username, password);
+        col1.setPadding(false);
+        col1.setSpacing(false);
+
+        VerticalLayout col2 = new VerticalLayout(name, phone);
+        col2.setPadding(false);
+        col2.setSpacing(false);
+
+        VerticalLayout col3 = new VerticalLayout(street, city, state, country);
+        col3.setPadding(false);
+        col3.setSpacing(false);
+
+        HorizontalLayout columns = new HorizontalLayout(col1, col2, col3);
+        columns.setWidthFull();
+        columns.setSpacing(true);
+        columns.setPadding(false);
+        columns.setAlignItems(Alignment.START);
+        columns.setFlexGrow(1, col1, col2, col3);
+
+        HorizontalLayout actions = new HorizontalLayout(save, cancel);
+        actions.setWidthFull();
+        actions.setJustifyContentMode(JustifyContentMode.END);
+
+        dialog.add(columns, actions);
         dialog.open();
     }
+
 
     private void confirmDeleteStudent(Student student) {
 

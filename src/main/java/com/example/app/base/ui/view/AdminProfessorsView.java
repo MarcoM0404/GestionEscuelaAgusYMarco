@@ -68,7 +68,6 @@ public class AdminProfessorsView extends VerticalLayout {
         applyFilter("");
     }
 
-    /* -------------------------- LISTADO -------------------------- */
 
     private void configureGrid() {
         grid.addColumn(Professor::getId).setHeader("ID").setWidth("70px");
@@ -95,7 +94,6 @@ public class AdminProfessorsView extends VerticalLayout {
             : profService.search(term));
     }
 
-    /* -------------------------- FORMULARIO -------------------------- */
 
     private void openEditor(Professor selected) {
 
@@ -111,12 +109,11 @@ public class AdminProfessorsView extends VerticalLayout {
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle((prof.getId() == null ? "Nuevo" : "Editar")
                               + " profesor");
-        dialog.setWidth("50%");      // ⇽⇽ 50 % de la pantalla
-        dialog.setMaxWidth("800px"); //    (límite opcional)
+        dialog.setWidth("50%");
+        dialog.setMaxWidth("800px");
 
         Binder<Professor> binder = new Binder<>(Professor.class);
 
-        // ----------- campos -----------
         TextField   name     = new TextField("Nombre");
         TextField   email    = new TextField("Email");
         TextField   phone    = new TextField("Teléfono");
@@ -129,7 +126,6 @@ public class AdminProfessorsView extends VerticalLayout {
         TextField state   = new TextField("Provincia");
         TextField country = new TextField("País");
 
-        // ----------- binder -----------
         binder.forField(name).asRequired("Requerido")
               .bind(Professor::getName, Professor::setName);
         binder.forField(email).asRequired("Requerido")
@@ -153,7 +149,6 @@ public class AdminProfessorsView extends VerticalLayout {
 
         binder.readBean(prof);
 
-        // ----------- acciones -----------
         Button save = new Button("Guardar", ev -> {
             if (binder.writeBeanIfValid(prof)) {
 
@@ -173,19 +168,15 @@ public class AdminProfessorsView extends VerticalLayout {
         });
         Button cancel = new Button("Cerrar", e -> dialog.close());
 
-        /* ------------------- LAYOUT EN 3 COLUMNAS ------------------- */
 
-        // Columna 1 (email, usuario, contraseña)
         VerticalLayout col1 = new VerticalLayout(email, username, password);
         col1.setPadding(false);
         col1.setSpacing(false);
 
-        // Columna 2 (nombre, teléfono, salario)
         VerticalLayout col2 = new VerticalLayout(name, phone, salary);
         col2.setPadding(false);
         col2.setSpacing(false);
 
-        // Columna 3 (dirección)
         VerticalLayout col3 = new VerticalLayout(street, city, state, country);
         col3.setPadding(false);
         col3.setSpacing(false);
@@ -205,7 +196,6 @@ public class AdminProfessorsView extends VerticalLayout {
         dialog.open();
     }
 
-    /* -------------------------- BORRADO -------------------------- */
 
     private void confirmDeleteProfessor(Professor prof) {
 
