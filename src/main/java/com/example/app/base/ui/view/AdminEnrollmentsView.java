@@ -4,6 +4,7 @@ import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -13,9 +14,15 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.NumberField;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Route(value = "admin/enrollments", layout = MainLayout.class)
 public class AdminEnrollmentsView extends VerticalLayout {
@@ -25,9 +32,10 @@ public class AdminEnrollmentsView extends VerticalLayout {
     private final StudentService studentService;
 
     private final Grid<Seat> grid = new Grid<>(Seat.class, false);
-
     private final Button toggleHistoryBtn = new Button("📑 Ver historial");
 
+
+    @Autowired
     public AdminEnrollmentsView(SeatService seatService,
                                 CourseService courseService,
                                 StudentService studentService) {
@@ -61,6 +69,7 @@ public class AdminEnrollmentsView extends VerticalLayout {
         add(grid);
     }
 
+
     private void configureGrid() {
         grid.addColumn(Seat::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(s -> s.getCourse().getName()).setHeader("Curso");
@@ -69,14 +78,11 @@ public class AdminEnrollmentsView extends VerticalLayout {
         grid.addColumn(Seat::getMark).setHeader("Nota");
 
         grid.setSizeFull();
-
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
 
     private void refreshGrid() {
-        if (grid.isVisible()) {
-            grid.setItems(seatService.findAll());
-        }
+        if (grid.isVisible()) grid.setItems(seatService.findAll());
     }
 
     private void toggleHistory() {
@@ -90,11 +96,14 @@ public class AdminEnrollmentsView extends VerticalLayout {
         }
     }
 
-    private void openEditor(Seat original) {
-        final Seat seat = original;
 
-        if (seat.getCourse() == null)  seat.setCourse(new Course());
-        if (seat.getStudent() == null) seat.setStudent(new Student());
+    private void openEditor(Seat original) {
+
+        final Seat seat = original;
+        if (seat.getCourse()   == null) seat.setCourse(new Course());
+        if (seat.getStudent()  == null) seat.setStudent(new Student());
+        if (seat.getStudent().getStudentNumber() == null)
+            seat.getStudent().setStudentNumber(UUID.randomUUID());
 
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle(seat.getId() == null ? "Nueva inscripción" : "Editar inscripción");
@@ -102,37 +111,64 @@ public class AdminEnrollmentsView extends VerticalLayout {
 
         Binder<Seat> binder = new Binder<>(Seat.class);
 
-        Select<Course>  courseSelect  = new Select<>();
-        Select<Student> studentSelect = new Select<>();
-        DatePicker      yearPicker    = new DatePicker("Año");
-        NumberField     markField     = new NumberField("Nota");
-
+        Select<Course> courseSelect = new Select<>();
         courseSelect.setLabel("Curso");
         courseSelect.setItems(courseService.findAll());
         courseSelect.setItemLabelGenerator(Course::getName);
-
-        studentSelect.setLabel("Alumno");
-        studentSelect.setItems(studentService.findAll());
-        studentSelect.setItemLabelGenerator(Student::getName);
 
         binder.forField(courseSelect)
               .asRequired("Requerido")
               .bind(Seat::getCourse, Seat::setCourse);
 
-        binder.forField(studentSelect)
-              .asRequired("Requerido")
-              .bind(Seat::getStudent, Seat::setStudent);
+        TextField chosenStudentField = new TextField("Alumno");
+        chosenStudentField.setReadOnly(true);
+        chosenStudentField.setWidthFull();
+
+        Button selectStudentBtn = new Button("Seleccionar alumno");
+        selectStudentBtn.addThemeVariants(
+                ButtonVariant.LUMO_TERTIARY_INLINE,
+                ButtonVariant.LUMO_SMALL
+        );
+
+        final Student[] chosenStudent = {
+                seat.getStudent().getId() != null ? seat.getStudent() : null
+        };
+        if (chosenStudent[0] != null) {
+            chosenStudentField.setValue(chosenStudent[0].getName());
+        }
+
+        selectStudentBtn.addClickListener(e ->
+                openStudentPicker(stu -> {
+                    chosenStudent[0] = stu;
+                    chosenStudentField.setValue(stu.getName());
+                })
+        );
+
+        VerticalLayout studentBlock = new VerticalLayout(chosenStudentField, selectStudentBtn);
+        studentBlock.setPadding(false);
+        studentBlock.setSpacing(false);
+        studentBlock.setWidthFull();
+
+        DatePicker  yearPicker = new DatePicker("Año");
+        NumberField markField  = new NumberField("Nota");
 
         binder.forField(yearPicker)
               .asRequired("Requerido")
               .bind(Seat::getYear, Seat::setYear);
-
         binder.forField(markField)
               .bind(Seat::getMark, Seat::setMark);
 
         binder.readBean(seat);
 
         Button save = new Button("Guardar", ev -> {
+
+            if (chosenStudent[0] == null) {
+                Notification.show("Debes seleccionar un alumno.",
+                                  3000, Notification.Position.MIDDLE);
+                return;
+            }
+            seat.setStudent(chosenStudent[0]);
+
             if (binder.writeBeanIfValid(seat)) {
                 seatService.save(seat);
                 refreshGrid();
@@ -142,11 +178,67 @@ public class AdminEnrollmentsView extends VerticalLayout {
         });
         Button cancel = new Button("Cancelar", e -> dialog.close());
 
+        HorizontalLayout actions = new HorizontalLayout(save, cancel);
+        actions.setWidthFull();
+        actions.setJustifyContentMode(JustifyContentMode.END);
+
         dialog.add(new VerticalLayout(
-            courseSelect, studentSelect,
-            yearPicker, markField,
-            new HorizontalLayout(save, cancel)
+                courseSelect,
+                studentBlock,
+                yearPicker,
+                markField,
+                actions
         ));
         dialog.open();
+    }
+
+
+    private void openStudentPicker(Consumer<Student> onSelect) {
+
+        Dialog picker = new Dialog();
+        picker.setHeaderTitle("Seleccionar alumno");
+        picker.setWidth("600px");
+        picker.setHeight("70vh");
+
+        TextField search = new TextField();
+        search.setPlaceholder("Buscar por nombre…");
+        search.setWidthFull();
+
+        Grid<Student> stuGrid = new Grid<>(Student.class, false);
+        stuGrid.addColumn(Student::getName).setHeader("Nombre").setAutoWidth(true);
+        stuGrid.addColumn(Student::getEmail).setHeader("Email").setAutoWidth(true);
+        stuGrid.addColumn(s -> s.getStudentNumber().toString())
+               .setHeader("Matrícula").setAutoWidth(true);
+        stuGrid.setSizeFull();
+
+        List<Student> all = studentService.findAll();
+        stuGrid.setItems(all);
+
+        search.addValueChangeListener(ev -> {
+            String term = ev.getValue().trim().toLowerCase();
+            if (term.isBlank()) {
+                stuGrid.setItems(all);
+            } else {
+                stuGrid.setItems(
+                        all.stream()
+                           .filter(s -> s.getName().toLowerCase().contains(term))
+                           .collect(Collectors.toList())
+                );
+            }
+        });
+
+        stuGrid.addItemDoubleClickListener(ev -> {
+            onSelect.accept(ev.getItem());
+            picker.close();
+        });
+
+        VerticalLayout content = new VerticalLayout(search, stuGrid);
+        content.setSizeFull();
+        content.setPadding(false);
+        content.setSpacing(false);
+        content.expand(stuGrid);
+
+        picker.add(content);
+        picker.open();
     }
 }
