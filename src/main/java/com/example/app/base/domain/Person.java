@@ -7,72 +7,47 @@ import jakarta.persistence.*;
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Person {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false, unique = true)
-    private String email;
-
+    @Column(nullable = false)            private String name;
+    @Column(nullable = false, unique = true) private String email;
     private String phone;
 
-    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL, optional = true) //Cambiamos ManyToOne a OneToOne
+    /* Address (sin cambios) */
+    @OneToOne(fetch = FetchType.EAGER,
+              cascade = CascadeType.ALL,
+              optional = true)
     @JoinColumn(name = "address_id")
     private Address address;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    /* User — solo propagamos REMOVE */
+    @OneToOne(fetch = FetchType.LAZY,
+              cascade = CascadeType.REMOVE,   // ← ya NO incluye PERSIST
+              orphanRemoval = true)           // ← sigue eliminando huérfanos
     @JoinColumn(name = "user_id")
     private User user;
 
-    public Long getId() {
-        return this.id;
-    }
+    /* getters & setters … */
+    // ...;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    /* ---------- getters / setters ---------- */
 
-	public String getName() {
-		return name;
-	}
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-	public String getEmail() {
-		return email;
-	}
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-	public String getPhone() {
-		return phone;
-	}
+    public Address getAddress() { return address; }
+    public void setAddress(Address address) { this.address = address; }
 
-	public void setPhone(String phone) {
-		this.phone = phone;
-	}
-
-	public Address getAddress() {
-		return address;
-	}
-
-	public void setAddress(Address address) {
-		this.address = address;
-	}
-
-	public User getUser() {
-		return user;
-	}
-
-	public void setUser(User user) {
-		this.user = user;
-	}
-
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 }
