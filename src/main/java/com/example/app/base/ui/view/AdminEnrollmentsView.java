@@ -20,7 +20,6 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -100,13 +99,12 @@ public class AdminEnrollmentsView extends VerticalLayout {
     private void openEditor(Seat original) {
 
         final Seat seat = original;
-        if (seat.getCourse()   == null) seat.setCourse(new Course());
-        if (seat.getStudent()  == null) seat.setStudent(new Student());
-        if (seat.getStudent().getStudentNumber() == null)
-            seat.getStudent().setStudentNumber(UUID.randomUUID());
+
+        if (seat.getStudent() == null) seat.setStudent(new Student());
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(seat.getId() == null ? "Nueva inscripción" : "Editar inscripción");
+        dialog.setHeaderTitle(seat.getId() == null ? "Nueva inscripción"
+                                                   : "Editar inscripción");
         dialog.setWidth("450px");
 
         Binder<Seat> binder = new Binder<>(Seat.class);
@@ -130,10 +128,9 @@ public class AdminEnrollmentsView extends VerticalLayout {
                 ButtonVariant.LUMO_SMALL
         );
 
-        final Student[] chosenStudent = {
-                seat.getStudent().getId() != null ? seat.getStudent() : null
-        };
-        if (chosenStudent[0] != null) {
+        final Student[] chosenStudent = { null };
+        if (seat.getStudent() != null && seat.getStudent().getId() != null) {
+            chosenStudent[0] = seat.getStudent();
             chosenStudentField.setValue(chosenStudent[0].getName());
         }
 
@@ -144,7 +141,8 @@ public class AdminEnrollmentsView extends VerticalLayout {
                 })
         );
 
-        VerticalLayout studentBlock = new VerticalLayout(chosenStudentField, selectStudentBtn);
+        VerticalLayout studentBlock =
+                new VerticalLayout(chosenStudentField, selectStudentBtn);
         studentBlock.setPadding(false);
         studentBlock.setSpacing(false);
         studentBlock.setWidthFull();
@@ -169,11 +167,16 @@ public class AdminEnrollmentsView extends VerticalLayout {
             }
             seat.setStudent(chosenStudent[0]);
 
-            if (binder.writeBeanIfValid(seat)) {
-                seatService.save(seat);
-                refreshGrid();
-                dialog.close();
-                Notification.show("Inscripción guardada");
+            try {
+                if (binder.writeBeanIfValid(seat)) {
+                    seatService.save(seat);
+                    refreshGrid();
+                    dialog.close();
+                    Notification.show("Inscripción guardada");
+                }
+            } catch (SeatService.DuplicateEnrollmentException dup) {
+                Notification.show(dup.getMessage(),
+                                  3000, Notification.Position.MIDDLE);
             }
         });
         Button cancel = new Button("Cancelar", e -> dialog.close());
