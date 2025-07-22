@@ -4,6 +4,7 @@ import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -13,7 +14,6 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
@@ -29,7 +29,7 @@ public class AdminCoursesView extends VerticalLayout {
     private final SeatService      seatService;
 
     private final Grid<Course> grid   = new Grid<>(Course.class, false);
-    private final TextField    filter = new TextField();
+    private final TextField    filter = new TextField();          // ya instanciado aquí
 
     public AdminCoursesView(CourseService courseService,
                             ProfessorService profService,
@@ -47,14 +47,22 @@ public class AdminCoursesView extends VerticalLayout {
 
         setSizeFull();
 
-        H2 title = new H2("📚 Gestión de Cursos");
-
-        Button addBtn = new Button("➕ Nuevo Curso",
-                                   e -> openEditor(new Course()));
+        Icon bookIcon = VaadinIcon.BOOK.create();
+        bookIcon.getStyle().set("margin-right", "4px");
+        H2   titleLbl = new H2("Gestión de Cursos");
+        HorizontalLayout title = new HorizontalLayout(bookIcon, titleLbl);
+        title.setAlignItems(Alignment.CENTER);
 
         filter.setPlaceholder("Buscar curso…");
+        filter.setPrefixComponent(VaadinIcon.SEARCH.create());    // lupita
         filter.setClearButtonVisible(true);
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
+
+        Icon plus = VaadinIcon.PLUS_CIRCLE.create();
+        plus.getStyle().set("margin-right", "6px");
+        Button addBtn = new Button("Nuevo Curso", plus,
+                e -> openEditor(new Course()));
+        addBtn.setIconAfterText(false);
 
         HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
@@ -65,6 +73,7 @@ public class AdminCoursesView extends VerticalLayout {
         add(grid);
         applyFilter("");
     }
+
 
     private void configureGrid() {
 
@@ -91,7 +100,6 @@ public class AdminCoursesView extends VerticalLayout {
         })).setHeader("").setAutoWidth(true).setFlexGrow(0);
 
         grid.setSizeFull();
-
         grid.addItemDoubleClickListener(e -> openSeatsDialog(e.getItem()));
     }
 
@@ -101,40 +109,51 @@ public class AdminCoursesView extends VerticalLayout {
             : courseService.search(term));
     }
 
+
     private void openEditor(Course course) {
+
         Dialog dialog = new Dialog();
         dialog.setWidth("400px");
-        dialog.setHeaderTitle("Editar curso");
+        dialog.setHeaderTitle(course.getId() == null ? "Nuevo curso" : "Editar curso");
 
         Binder<Course> binder = new Binder<>(Course.class);
-        TextField      nameField = new TextField("Nombre");
-        Select<Professor> profSelect = new Select<>();
 
-        binder.forField(nameField).asRequired("El nombre es obligatorio")
+        TextField nameField = new TextField("Nombre");
+        nameField.setPrefixComponent(VaadinIcon.BOOK.create());
+
+        binder.forField(nameField)
+              .asRequired("El nombre es obligatorio")
               .bind(Course::getName, Course::setName);
 
-        profSelect.setLabel("Profesor");
+        ComboBox<Professor> profSelect = new ComboBox<>("Profesor");
+        profSelect.setPrefixComponent(VaadinIcon.ACADEMY_CAP.create());
         profSelect.setItems(profService.findAll());
         profSelect.setItemLabelGenerator(Professor::getName);
+
         binder.forField(profSelect)
               .bind(Course::getProfessor, Course::setProfessor);
 
-        binder.readBean(course);
-
-        Button save   = new Button("Guardar",
-                        e -> { if (binder.writeBeanIfValid(course)) {
-                                   courseService.save(course);
-                                   applyFilter(filter.getValue());
-                                   dialog.close();
-                               }});
+        Button save = new Button("Guardar", e -> {
+            if (binder.writeBeanIfValid(course)) {
+                courseService.save(course);
+                applyFilter(filter.getValue());
+                dialog.close();
+            }
+        });
         Button cancel = new Button("Cerrar", e -> dialog.close());
 
+        HorizontalLayout actions = new HorizontalLayout(save, cancel);
+        actions.setWidthFull();
+        actions.setJustifyContentMode(JustifyContentMode.END);
+
         dialog.add(new VerticalLayout(
-            nameField, profSelect,
-            new HorizontalLayout(save, cancel)
+                nameField,
+                profSelect,
+                actions
         ));
         dialog.open();
     }
+
 
     private void openSeatsDialog(Course course) {
 
@@ -175,9 +194,8 @@ public class AdminCoursesView extends VerticalLayout {
         seatsGrid.setItems(seatService.findByCourseId(course.getId()));
         seatsGrid.setSizeFull();
 
-        /* footer */
         Button editBtn  = new Button("Editar curso",
-                           e -> { dlg.close(); openEditor(course); });
+                e -> { dlg.close(); openEditor(course); });
         Button closeBtn = new Button("Cerrar", e -> dlg.close());
         HorizontalLayout footer = new HorizontalLayout(editBtn, closeBtn);
         footer.getStyle().set("margin-top", "var(--lumo-space-m)");

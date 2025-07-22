@@ -37,7 +37,6 @@ public class AdminAdminsView extends VerticalLayout {
         this.adminService = adminService;
         this.encoder      = encoder;
 
-        /* ---------- Seguridad ---------- */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
