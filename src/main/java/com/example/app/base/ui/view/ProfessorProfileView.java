@@ -6,6 +6,9 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
@@ -31,7 +34,6 @@ public class ProfessorProfileView extends VerticalLayout {
         this.personService  = personService;
         this.addressService = addressService;
 
-
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.PROFESSOR) {
             UI.getCurrent().navigate("login");
@@ -39,24 +41,27 @@ public class ProfessorProfileView extends VerticalLayout {
         }
 
         setSizeFull();
-        add(new H2("👤 Mi Perfil"));
+
+
+        H2 header = new H2();
+        header.add(new Icon(VaadinIcon.USER), new Span(" Mi Perfil"));
+        add(header);
 
         profService.findByUserId(u.getId()).ifPresentOrElse(me -> {
-     
             if (me.getAddress() == null) {
                 me.setAddress(new Address());
             }
 
             binder = new Binder<>(Professor.class);
 
-            TextField    name    = new TextField("Nombre");
-            TextField    email   = new TextField("Email");
-            TextField    phone   = new TextField("Teléfono");
-            NumberField  salary  = new NumberField("Salario");
-            TextField    street  = new TextField("Calle");
-            TextField    city    = new TextField("Ciudad");
-            TextField    state   = new TextField("Provincia");
-            TextField    country = new TextField("País");
+            TextField   name    = new TextField("Nombre");
+            TextField   email   = new TextField("Email");
+            TextField   phone   = new TextField("Teléfono");
+            NumberField salary  = new NumberField("Salario");
+            TextField   street  = new TextField("Calle");
+            TextField   city    = new TextField("Ciudad");
+            TextField   state   = new TextField("Provincia");
+            TextField   country = new TextField("País");
 
             binder.forField(name)
                   .asRequired("Requerido")
@@ -71,13 +76,13 @@ public class ProfessorProfileView extends VerticalLayout {
                   .bind(Professor::getSalary, Professor::setSalary);
 
             binder.forField(street)
-                  .bind(p -> p.getAddress().getStreet(),  (p,v)->p.getAddress().setStreet(v));
+                  .bind(p -> p.getAddress().getStreet(), (p,v) -> p.getAddress().setStreet(v));
             binder.forField(city)
-                  .bind(p -> p.getAddress().getCity(),    (p,v)->p.getAddress().setCity(v));
+                  .bind(p -> p.getAddress().getCity(),   (p,v) -> p.getAddress().setCity(v));
             binder.forField(state)
-                  .bind(p -> p.getAddress().getState(),   (p,v)->p.getAddress().setState(v));
+                  .bind(p -> p.getAddress().getState(),  (p,v) -> p.getAddress().setState(v));
             binder.forField(country)
-                  .bind(p -> p.getAddress().getCountry(), (p,v)->p.getAddress().setCountry(v));
+                  .bind(p -> p.getAddress().getCountry(), (p,v) -> p.getAddress().setCountry(v));
 
             FormLayout form = new FormLayout(
                 name, email, phone, salary,
@@ -94,13 +99,14 @@ public class ProfessorProfileView extends VerticalLayout {
                     Notification.show("Perfil guardado", 1500, Notification.Position.BOTTOM_START);
                 }
             });
+            save.setIcon(new Icon(VaadinIcon.CHECK));
 
             add(form, save);
 
         }, () -> {
-
-            Notification.show("Aún no tienes perfil creado. Contacta al administrador.", 3000, Notification.Position.MIDDLE);
-            UI.getCurrent().navigate(""); 
+            Notification.show("Aún no tienes perfil creado. Contacta al administrador.",
+                               3000, Notification.Position.MIDDLE);
+            UI.getCurrent().navigate("");
         });
     }
 }

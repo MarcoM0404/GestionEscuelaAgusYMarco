@@ -2,14 +2,23 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.Course;
 import com.example.app.base.domain.Seat;
-import com.example.app.base.domain.*;
-import com.example.app.base.service.*;
+import com.example.app.base.domain.Student;
+import com.example.app.base.domain.Role;
+import com.example.app.base.domain.User;
+import com.example.app.base.service.CourseService;
+import com.example.app.base.service.SeatService;
+import com.example.app.base.service.ProfessorService;
+import com.example.app.base.service.StudentService;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -18,14 +27,14 @@ import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import java.util.OptionalDouble;
 
 @Route(value = "professor", layout = MainLayout.class)
 public class ProfessorView extends VerticalLayout {
 
-    private final StudentService   studentService;
-    private final SeatService      seatService;
-
+    private final StudentService studentService;
+    private final SeatService seatService;
     private final Grid<Course> courseGrid = new Grid<>(Course.class, false);
 
     @Autowired
@@ -34,8 +43,7 @@ public class ProfessorView extends VerticalLayout {
                          CourseService courseService,
                          SeatService seatService) {
         this.studentService = studentService;
-        this.seatService    = seatService;
-
+        this.seatService = seatService;
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.PROFESSOR) {
@@ -46,12 +54,14 @@ public class ProfessorView extends VerticalLayout {
         setSizeFull();
 
 
-        add(
-          new H2("👨‍🏫 Bienvenido, " + u.getUsername()),
-          new Button("✏️ Mi Perfil", e ->
-              UI.getCurrent().navigate("professor/profile")
-          )
-        );
+        H2 welcome = new H2();
+        welcome.add(new Icon(VaadinIcon.USER), new Text(" Bienvenido, " + u.getUsername()));
+        add(welcome);
+
+
+        Button profileBtn = new Button("Mi Perfil", e -> UI.getCurrent().navigate("professor/profile"));
+        profileBtn.setIcon(new Icon(VaadinIcon.USER_CARD));
+        add(profileBtn);
 
 
         courseGrid.addColumn(Course::getId)
@@ -60,13 +70,9 @@ public class ProfessorView extends VerticalLayout {
         courseGrid.addColumn(Course::getName)
                   .setHeader("Curso")
                   .setAutoWidth(true);
-
-
-        courseGrid.addColumn(c ->
-            seatService.findByCourseId(c.getId()).size()
-        ).setHeader("Inscritos").setAutoWidth(true);
-
-
+        courseGrid.addColumn(c -> seatService.findByCourseId(c.getId()).size())
+                  .setHeader("Inscritos")
+                  .setAutoWidth(true);
         courseGrid.addColumn(c -> {
             OptionalDouble avgOpt = seatService.findByCourseId(c.getId()).stream()
                 .mapToDouble(s -> s.getMark() != null ? s.getMark() : 0.0)
@@ -84,8 +90,11 @@ public class ProfessorView extends VerticalLayout {
         });
 
         courseGrid.setSizeFull();
-        add(new H2("📋 Mis Cursos"), courseGrid);
 
+
+        H2 coursesHeader = new H2();
+        coursesHeader.add(new Icon(VaadinIcon.BOOK), new Text(" Mis Cursos"));
+        add(coursesHeader, courseGrid);
 
         Long profId = profService.findByUserId(u.getId())
                                  .map(p -> p.getId())
@@ -96,7 +105,12 @@ public class ProfessorView extends VerticalLayout {
     private void openEnrollmentDialog(Course course) {
         Dialog dialog = new Dialog();
         dialog.setWidth("700px");
-        dialog.add(new H2("📝 Inscripciones: " + course.getName()));
+
+        H2 title = new H2();
+        title.add(
+            new Icon(VaadinIcon.CLIPBOARD_TEXT),
+            new Span(" Inscripciones: " + course.getName())
+        );
 
 
         Select<Student> studentSelect = new Select<>();
@@ -107,7 +121,7 @@ public class ProfessorView extends VerticalLayout {
         DatePicker inscDate = new DatePicker("Fecha Inscripción");
         inscDate.setValue(java.time.LocalDate.now());
 
-        Button enrollBtn = new Button("➕ Inscribir", e -> {
+        Button enrollBtn = new Button("Inscribir", e -> {
             Student s = studentSelect.getValue();
             if (s == null) {
                 Notification.show("Selecciona un alumno", 2000, Notification.Position.BOTTOM_START);
@@ -120,14 +134,10 @@ public class ProfessorView extends VerticalLayout {
             seatService.save(seat);
             refreshSeatGrid(course, dialog);
         });
+        enrollBtn.setIcon(new Icon(VaadinIcon.PLUS_CIRCLE));
 
-        HorizontalLayout toolbar = new HorizontalLayout(
-            studentSelect, inscDate, enrollBtn
-        );
-        
-        
-        //ver tema del grid!!!!!
-        
+        HorizontalLayout toolbar = new HorizontalLayout(studentSelect, inscDate, enrollBtn);
+
         Grid<Seat> seatGrid = new Grid<>(Seat.class, false);
         seatGrid.addColumn(Seat::getId).setHeader("ID").setWidth("50px");
         seatGrid.addColumn(s -> s.getStudent().getName()).setHeader("Alumno").setAutoWidth(true);
@@ -135,15 +145,14 @@ public class ProfessorView extends VerticalLayout {
         seatGrid.addColumn(Seat::getEvaluationDate).setHeader("Evaluación");
         seatGrid.addColumn(Seat::getMark).setHeader("Nota");
 
-
         seatGrid.addComponentColumn(seat -> {
-            Button del = new Button("🗑️", ev -> {
+            Button del = new Button(new Icon(VaadinIcon.TRASH));
+            del.addClickListener(ev -> {
                 seatService.deleteById(seat.getId());
                 refreshSeatGrid(course, dialog);
             });
             return del;
         }).setHeader("Quitar");
-
 
         seatGrid.asSingleSelect().addValueChangeListener(evt -> {
             if (evt.getValue() != null) {
@@ -152,7 +161,6 @@ public class ProfessorView extends VerticalLayout {
         });
 
         seatGrid.setSizeFull();
-
         dialog.add(toolbar, seatGrid);
         dialog.open();
         refreshSeatGrid(course, dialog);
@@ -164,18 +172,19 @@ public class ProfessorView extends VerticalLayout {
               .filter(c -> c instanceof Grid)
               .map(c -> (Grid<Seat>) c)
               .findFirst()
-              .ifPresent(g -> g.setItems(
-                  seatService.findByCourseId(course.getId())
-              ));
+              .ifPresent(g -> g.setItems(seatService.findByCourseId(course.getId())));
     }
 
     private void openEditSeatDialog(Seat seat, Grid<Seat> seatGrid) {
         Dialog d = new Dialog();
         d.setWidth("400px");
-        d.add(new H2("✏️ Editar Inscripción"));
+
+        H2 editTitle = new H2();
+        editTitle.add(new Icon(VaadinIcon.EDIT), new Text(" Editar Inscripción"));
+        d.add(editTitle);
 
         NumberField markField = new NumberField("Nota");
-        DatePicker evalDate   = new DatePicker("Fecha Evaluación");
+        DatePicker evalDate = new DatePicker("Fecha Evaluación");
         markField.setValue(seat.getMark());
         evalDate.setValue(seat.getEvaluationDate());
 
@@ -186,12 +195,12 @@ public class ProfessorView extends VerticalLayout {
             seatGrid.getDataProvider().refreshAll();
             d.close();
         });
-        Button cancel = new Button("Cancelar", e -> d.close());
+        save.setIcon(new Icon(VaadinIcon.CHECK));
 
-        d.add(new VerticalLayout(
-            markField, evalDate,
-            new HorizontalLayout(save, cancel)
-        ));
+        Button cancel = new Button("Cancelar", e -> d.close());
+        cancel.setIcon(new Icon(VaadinIcon.CLOSE));
+
+        d.add(new VerticalLayout(markField, evalDate, new HorizontalLayout(save, cancel)));
         d.open();
     }
 }
