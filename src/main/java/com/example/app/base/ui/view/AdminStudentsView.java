@@ -22,6 +22,7 @@ import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.util.UUID;
 
 @Route(value = "admin/students", layout = MainLayout.class)
@@ -58,15 +59,23 @@ public class AdminStudentsView extends VerticalLayout {
 
         setSizeFull();
 
-        H2 title = new H2("👩‍🎓 Gestión de Alumnos");
-
-        Button addBtn = new Button("➕ Nuevo Alumno",
-                                   e -> openEditor(new Student()));
+        Icon titIcon = VaadinIcon.GROUP.create();
+        titIcon.getStyle().set("margin-right", "4px");
+        H2 titleLbl = new H2("Gestión de Alumnos");
+        HorizontalLayout title = new HorizontalLayout(titIcon, titleLbl);
+        title.setAlignItems(Alignment.CENTER);
 
         filter.setPlaceholder("Buscar alumno…");
+        filter.setPrefixComponent(VaadinIcon.SEARCH.create());
         filter.setClearButtonVisible(true);
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
 
+        Icon plus = VaadinIcon.PLUS_CIRCLE.create();
+        plus.getStyle().set("margin-right", "6px");
+        Button addBtn = new Button("Nuevo Alumno", plus,
+                e -> openEditor(new Student()));
+        addBtn.setIconAfterText(false);
+        
         HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
@@ -116,26 +125,44 @@ public class AdminStudentsView extends VerticalLayout {
             student.setStudentNumber(UUID.randomUUID());
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle((student.getId() == null ? "Nuevo" : "Editar")
-                              + " alumno");
+        dialog.setHeaderTitle((student.getId() == null ? "Nuevo" : "Editar") + " alumno");
         dialog.setWidth("50%");
         dialog.setMaxWidth("800px");
 
         Binder<Student> binder = new Binder<>(Student.class);
 
-        TextField   name     = new TextField("Nombre");
-        TextField   email    = new TextField("Email");
-        TextField   phone    = new TextField("Teléfono");
-        TextField   username = new TextField("Usuario");
+        TextField email = new TextField("Email");
+        email.setPrefixComponent(VaadinIcon.ENVELOPE.create());
+
+        TextField username = new TextField("Usuario");
+        username.setPrefixComponent(VaadinIcon.USER.create());
+
         PasswordField password = new PasswordField("Contraseña");
+        password.setPrefixComponent(VaadinIcon.LOCK.create());
+
+        TextField name = new TextField("Nombre");
+        name.setPrefixComponent(VaadinIcon.USER_CHECK.create());
+
+        TextField phone = new TextField("Teléfono");
+        phone.setPrefixComponent(VaadinIcon.PHONE.create());
 
         TextField street  = new TextField("Calle");
-        TextField city    = new TextField("Ciudad");
-        TextField state   = new TextField("Provincia");
-        TextField country = new TextField("País");
+        street.setPrefixComponent(VaadinIcon.ROAD.create());
 
-        for (var f : new HasSize[]{name,email,phone,username,password,
-                                   street,city,state,country}) {
+        TextField city    = new TextField("Ciudad");
+        city.setPrefixComponent(VaadinIcon.BUILDING.create());
+
+        TextField state   = new TextField("Provincia");
+        state.setPrefixComponent(VaadinIcon.MAP_MARKER.create());
+
+        TextField country = new TextField("País");
+        country.setPrefixComponent(VaadinIcon.GLOBE_WIRE.create());
+
+        for (HasSize f : new HasSize[]{
+                email, username, password,
+                name, phone,
+                street, city, state, country
+        }) {
             f.setWidthFull();
         }
 
@@ -193,18 +220,14 @@ public class AdminStudentsView extends VerticalLayout {
         });
         Button cancel = new Button("Cancelar", e -> dialog.close());
 
-
         VerticalLayout col1 = new VerticalLayout(email, username, password);
-        col1.setPadding(false);
-        col1.setSpacing(false);
+        col1.setPadding(false); col1.setSpacing(false);
 
         VerticalLayout col2 = new VerticalLayout(name, phone);
-        col2.setPadding(false);
-        col2.setSpacing(false);
+        col2.setPadding(false); col2.setSpacing(false);
 
         VerticalLayout col3 = new VerticalLayout(street, city, state, country);
-        col3.setPadding(false);
-        col3.setSpacing(false);
+        col3.setPadding(false); col3.setSpacing(false);
 
         HorizontalLayout columns = new HorizontalLayout(col1, col2, col3);
         columns.setWidthFull();
