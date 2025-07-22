@@ -4,9 +4,11 @@ import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -21,9 +23,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Route(value = "admin/admins", layout = MainLayout.class)
 public class AdminAdminsView extends VerticalLayout {
 
-    private final UserService         userService;
+    private final UserService          userService;
     private final AdministratorService adminService;
-    private final PasswordEncoder     encoder;
+    private final PasswordEncoder      encoder;
 
     private final Grid<Administrator> grid   = new Grid<>(Administrator.class, false);
     private final TextField           filter = new TextField();
@@ -35,6 +37,7 @@ public class AdminAdminsView extends VerticalLayout {
         this.adminService = adminService;
         this.encoder      = encoder;
 
+        /* ---------- Seguridad ---------- */
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.ADMIN) {
             UI.getCurrent().navigate("login");
@@ -43,12 +46,21 @@ public class AdminAdminsView extends VerticalLayout {
 
         setSizeFull();
 
-        H2 title = new H2("👑 Gestión de Administradores");
+     // --- título con icono ---
+        Icon adminIcon = VaadinIcon.USER_STAR.create();   // o VaadinIcon.COGS.create()
+        adminIcon.getStyle().set("margin-right", "4px");
 
-        Button addBtn = new Button("➕ Nuevo Admin",
-                                   e -> openEditor(new Administrator(), true));
+        H2 titleText = new H2("Gestión de Administradores");
+        HorizontalLayout title = new HorizontalLayout(adminIcon, titleText);
+        title.setAlignItems(Alignment.CENTER);
+
+        Icon plus = VaadinIcon.PLUS_CIRCLE.create();          // ⊕ círculo con + (también vale VaadinIcon.PLUS)
+        Button addBtn = new Button("Nuevo Admin", plus,       // texto + icono
+                e -> openEditor(new Administrator(), true));
+        addBtn.setIconAfterText(false); 
 
         filter.setPlaceholder("Buscar admin…");
+        filter.setPrefixComponent(VaadinIcon.SEARCH.create());  // ← icono
         filter.setClearButtonVisible(true);
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
 
@@ -62,11 +74,15 @@ public class AdminAdminsView extends VerticalLayout {
         applyFilter("");
     }
 
+    /* ---------------- GRID ---------------- */
+
     private void configureGrid() {
-        grid.addColumn(a -> a.getUser().getId())   .setHeader("ID").setWidth("70px");
-        grid.addColumn(a -> a.getUser().getUsername()).setHeader("Usuario").setAutoWidth(true);
-        grid.addColumn(Person::getName)            .setHeader("Nombre");
-        grid.addColumn(Person::getEmail)           .setHeader("Email");
+        grid.addColumn(a -> a.getUser().getId())
+            .setHeader("ID").setWidth("70px");
+        grid.addColumn(a -> a.getUser().getUsername())
+            .setHeader("Usuario").setAutoWidth(true);
+        grid.addColumn(Person::getName).setHeader("Nombre");
+        grid.addColumn(Person::getEmail).setHeader("Email");
 
         grid.addComponentColumn(admin -> {
             Button trash = new Button(VaadinIcon.TRASH.create(), click -> {
@@ -86,23 +102,43 @@ public class AdminAdminsView extends VerticalLayout {
         grid.setItems(term == null || term.isBlank()
             ? adminService.findAll()
             : adminService.findAll().stream()
-                  .filter(a -> a.getName().toLowerCase().contains(term.toLowerCase())
-                            || a.getEmail().toLowerCase().contains(term.toLowerCase())
-                            || a.getUser().getUsername().toLowerCase().contains(term.toLowerCase()))
-                  .toList());
+                .filter(a -> a.getName().toLowerCase().contains(term.toLowerCase())
+                          || a.getEmail().toLowerCase().contains(term.toLowerCase())
+                          || a.getUser().getUsername().toLowerCase().contains(term.toLowerCase()))
+                .toList());
     }
 
+    /* ---------------- FORMULARIO ---------------- */
+
     private void openEditor(Administrator admin, boolean isNew) {
+
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle((isNew ? "Nuevo" : "Editar") + " administrador");
+        dialog.setHeaderTitle(null);   // usaremos layout con icono
+
+        /* --- header con icono (USER_STAR) --- */
+        Icon starAdmin = VaadinIcon.USER_STAR.create();
+        starAdmin.getStyle().set("margin-right", "6px");
+        H2 hdr   = new H2((isNew ? "Nuevo" : "Editar") + " administrador");
+        HorizontalLayout hdrLayout = new HorizontalLayout(starAdmin, hdr);
+        hdrLayout.setAlignItems(Alignment.CENTER);
+        dialog.getHeader().add(hdrLayout);
+
         dialog.setWidth("420px");
 
         Binder<Administrator> binder = new Binder<>(Administrator.class);
 
-        TextField      name  = new TextField("Nombre");
-        TextField      email = new TextField("Email");
-        TextField      usern = new TextField("Usuario");
-        PasswordField  pass  = new PasswordField("Contraseña");
+        /* --- Campos con iconos prefijo --- */
+        TextField  usern = new TextField("Usuario");
+        usern.setPrefixComponent(VaadinIcon.USER.create());
+
+        PasswordField pass = new PasswordField("Contraseña");
+        pass.setPrefixComponent(VaadinIcon.LOCK.create());
+
+        TextField  name  = new TextField("Nombre");
+        name.setPrefixComponent(VaadinIcon.USER.create());
+
+        TextField  email = new TextField("Email");
+        email.setPrefixComponent(VaadinIcon.ENVELOPE.create());
 
         binder.forField(name).asRequired().bind(Administrator::getName, Administrator::setName);
         binder.forField(email).asRequired().bind(Administrator::getEmail, Administrator::setEmail);
@@ -115,6 +151,7 @@ public class AdminAdminsView extends VerticalLayout {
 
         binder.readBean(admin);
 
+        /* --- Botones --- */
         Button save = new Button("Guardar", e -> {
             if (binder.writeBeanIfValid(admin)) {
 
@@ -140,18 +177,23 @@ public class AdminAdminsView extends VerticalLayout {
                 }
 
                 adminService.save(admin);
-
                 applyFilter(filter.getValue());
                 dialog.close();
             }
         });
-
         Button cancel = new Button("Cerrar", e -> dialog.close());
+        cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-        dialog.add(new VerticalLayout(
-            usern, pass, name, email,
-            new HorizontalLayout(save, cancel)
-        ));
+        HorizontalLayout actions = new HorizontalLayout(save, cancel);
+        actions.setWidthFull();
+        actions.setJustifyContentMode(JustifyContentMode.END);
+
+        dialog.add(
+            new VerticalLayout(
+                usern, pass, name, email,
+                actions
+            )
+        );
         dialog.open();
     }
 }
