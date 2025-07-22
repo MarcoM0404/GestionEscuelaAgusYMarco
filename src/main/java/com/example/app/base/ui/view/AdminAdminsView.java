@@ -46,21 +46,20 @@ public class AdminAdminsView extends VerticalLayout {
 
         setSizeFull();
 
-     // --- título con icono ---
-        Icon adminIcon = VaadinIcon.USER_STAR.create();   // o VaadinIcon.COGS.create()
+        Icon adminIcon = VaadinIcon.USER_STAR.create();
         adminIcon.getStyle().set("margin-right", "4px");
 
         H2 titleText = new H2("Gestión de Administradores");
         HorizontalLayout title = new HorizontalLayout(adminIcon, titleText);
         title.setAlignItems(Alignment.CENTER);
 
-        Icon plus = VaadinIcon.PLUS_CIRCLE.create();          // ⊕ círculo con + (también vale VaadinIcon.PLUS)
-        Button addBtn = new Button("Nuevo Admin", plus,       // texto + icono
+        Icon plus = VaadinIcon.PLUS_CIRCLE.create();
+        Button addBtn = new Button("Nuevo Admin", plus,
                 e -> openEditor(new Administrator(), true));
         addBtn.setIconAfterText(false); 
 
         filter.setPlaceholder("Buscar admin…");
-        filter.setPrefixComponent(VaadinIcon.SEARCH.create());  // ← icono
+        filter.setPrefixComponent(VaadinIcon.SEARCH.create());
         filter.setClearButtonVisible(true);
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
 
@@ -74,7 +73,6 @@ public class AdminAdminsView extends VerticalLayout {
         applyFilter("");
     }
 
-    /* ---------------- GRID ---------------- */
 
     private void configureGrid() {
         grid.addColumn(a -> a.getUser().getId())
@@ -108,14 +106,12 @@ public class AdminAdminsView extends VerticalLayout {
                 .toList());
     }
 
-    /* ---------------- FORMULARIO ---------------- */
 
     private void openEditor(Administrator admin, boolean isNew) {
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(null);   // usaremos layout con icono
+        dialog.setHeaderTitle(null);
 
-        /* --- header con icono (USER_STAR) --- */
         Icon starAdmin = VaadinIcon.USER_STAR.create();
         starAdmin.getStyle().set("margin-right", "6px");
         H2 hdr   = new H2((isNew ? "Nuevo" : "Editar") + " administrador");
@@ -127,7 +123,6 @@ public class AdminAdminsView extends VerticalLayout {
 
         Binder<Administrator> binder = new Binder<>(Administrator.class);
 
-        /* --- Campos con iconos prefijo --- */
         TextField  usern = new TextField("Usuario");
         usern.setPrefixComponent(VaadinIcon.USER.create());
 
@@ -151,7 +146,6 @@ public class AdminAdminsView extends VerticalLayout {
 
         binder.readBean(admin);
 
-        /* --- Botones --- */
         Button save = new Button("Guardar", e -> {
             if (binder.writeBeanIfValid(admin)) {
 
