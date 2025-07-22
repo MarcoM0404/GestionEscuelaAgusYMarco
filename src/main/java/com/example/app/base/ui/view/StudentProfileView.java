@@ -6,6 +6,9 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
@@ -17,18 +20,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Route(value = "student/profile", layout = MainLayout.class)
 public class StudentProfileView extends VerticalLayout {
 
-    private final StudentService  studentService;
-    private final PersonService   personService;
-    private final AddressService  addressService;
+    private final StudentService studentService;
+    private final PersonService personService;
+    private final AddressService addressService;
 
     @Autowired
     public StudentProfileView(StudentService studentService,
                               PersonService personService,
                               AddressService addressService) {
-        this.studentService  = studentService;
-        this.personService   = personService;
-        this.addressService  = addressService;
-
+        this.studentService = studentService;
+        this.personService = personService;
+        this.addressService = addressService;
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.STUDENT) {
@@ -37,8 +39,11 @@ public class StudentProfileView extends VerticalLayout {
         }
 
         setSizeFull();
-        add(new H2("👤 Mi Perfil de Alumno"));
 
+
+        H2 header = new H2();
+        header.add(new Icon(VaadinIcon.USER), new Span(" Mi Perfil de Alumno"));
+        add(header);
 
         studentService.findByUserId(u.getId()).ifPresentOrElse(student -> {
 
@@ -51,10 +56,13 @@ public class StudentProfileView extends VerticalLayout {
             TextField name    = new TextField("Nombre");
             TextField email   = new TextField("Email");
             TextField phone   = new TextField("Teléfono");
-            TextField street  = new TextField("📍Calle");
+            TextField street  = new TextField("Calle");
             TextField city    = new TextField("Ciudad");
             TextField state   = new TextField("Provincia");
             TextField country = new TextField("País");
+
+
+            street.setPrefixComponent(new Icon(VaadinIcon.MAP_MARKER));
 
             binder.forField(name)
                   .asRequired("Requerido")
@@ -66,13 +74,13 @@ public class StudentProfileView extends VerticalLayout {
                   .bind(Student::getPhone, Student::setPhone);
 
             binder.forField(street)
-                  .bind(s -> s.getAddress().getStreet(),  (s,v)->s.getAddress().setStreet(v));
+                  .bind(s -> s.getAddress().getStreet(), (s,v) -> s.getAddress().setStreet(v));
             binder.forField(city)
-                  .bind(s -> s.getAddress().getCity(),    (s,v)->s.getAddress().setCity(v));
+                  .bind(s -> s.getAddress().getCity(),   (s,v) -> s.getAddress().setCity(v));
             binder.forField(state)
-                  .bind(s -> s.getAddress().getState(),   (s,v)->s.getAddress().setState(v));
+                  .bind(s -> s.getAddress().getState(),  (s,v) -> s.getAddress().setState(v));
             binder.forField(country)
-                  .bind(s -> s.getAddress().getCountry(), (s,v)->s.getAddress().setCountry(v));
+                  .bind(s -> s.getAddress().getCountry(), (s,v) -> s.getAddress().setCountry(v));
 
             FormLayout form = new FormLayout(
                 name, email, phone,
@@ -89,13 +97,15 @@ public class StudentProfileView extends VerticalLayout {
                     Notification.show("Perfil actualizado", 1500, Notification.Position.BOTTOM_START);
                 }
             });
+            save.setIcon(new Icon(VaadinIcon.CHECK));
 
             add(form, save);
 
         }, () -> {
 
-            Notification.show("Aún no tienes perfil de alumno. Contacta al administrador.", 3000, Notification.Position.MIDDLE);
-            UI.getCurrent().navigate(""); 
+            Notification.show("Aún no tienes perfil de alumno. Contacta al administrador.",
+                               3000, Notification.Position.MIDDLE);
+            UI.getCurrent().navigate("");
         });
     }
 }

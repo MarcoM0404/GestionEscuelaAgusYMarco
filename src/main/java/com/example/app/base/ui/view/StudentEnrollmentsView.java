@@ -1,8 +1,12 @@
 package com.example.app.base.ui.view;
 
-import com.example.app.base.domain.*;
-import com.example.app.base.service.*;
+import com.example.app.base.domain.Seat;
+import com.example.app.base.domain.User;
+import com.example.app.base.service.SeatService;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.router.Route;
@@ -21,14 +25,21 @@ public class StudentEnrollmentsView extends VerticalLayout {
         setSizeFull();
 
 
-        add(new H2("📋 Mis Inscripciones"));
+        H2 header = new H2();
+        header.add(new Icon(VaadinIcon.CLIPBOARD_TEXT), new Span(" Mis Inscripciones"));
+        add(header);
 
-        grid.addColumn(Seat::getId).setHeader("ID").setWidth("70px");
+
+        grid.addColumn(Seat::getId)
+            .setHeader("ID")
+            .setWidth("70px");
         grid.addColumn(s -> s.getCourse().getName())
             .setHeader("Curso")
             .setAutoWidth(true);
-        grid.addColumn(Seat::getYear).setHeader("Año");
-        grid.addColumn(Seat::getMark).setHeader("Nota");
+        grid.addColumn(Seat::getYear)
+            .setHeader("Año");
+        grid.addColumn(Seat::getMark)
+            .setHeader("Nota");
         grid.setSizeFull();
 
         add(grid);
@@ -37,7 +48,7 @@ public class StudentEnrollmentsView extends VerticalLayout {
         if (current == null) {
             getUI().ifPresent(ui -> ui.navigate("login"));
         } else {
-            List<Seat> inscripciones = 
+            List<Seat> inscripciones =
                 seatService.findByStudentUserId(current.getId());
             grid.setItems(inscripciones);
         }

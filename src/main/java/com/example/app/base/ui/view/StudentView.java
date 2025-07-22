@@ -7,6 +7,9 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
@@ -27,7 +30,6 @@ public class StudentView extends VerticalLayout {
         this.seatService    = seatService;
         this.studentService = studentService;
 
-
         User u = VaadinSession.getCurrent().getAttribute(User.class);
         if (u == null || u.getRole() != Role.STUDENT) {
             UI.getCurrent().navigate("login");
@@ -36,21 +38,29 @@ public class StudentView extends VerticalLayout {
 
         setSizeFull();
 
-
-        add(
-            new H2("🎓 Bienvenido, " + u.getUsername()),
-            new Button("✏️ Mi Perfil", e ->
-                UI.getCurrent().navigate("student/profile")
-            )
+        H2 welcome = new H2();
+        welcome.add(
+          new Icon(VaadinIcon.ACADEMY_CAP),
+          new Span(" Bienvenido, " + u.getUsername())
         );
-        
-        
-        double promedio = seatService.findByStudentUserId(u.getId()).stream()
-        	    .mapToDouble(s -> s.getMark() != null ? s.getMark() : 0.0)
-        	    .average()
-        	    .orElse(0.0);
-        	add(new H3("📊 Tu promedio de notas: " + String.format("%.2f", promedio)));
+        add(welcome);
 
+
+        Button profileBtn = new Button("Mi Perfil", e -> UI.getCurrent().navigate("student/profile"));
+        profileBtn.setIcon(new Icon(VaadinIcon.USER_CARD));
+        add(profileBtn);
+
+
+        double promedio = seatService.findByStudentUserId(u.getId()).stream()
+            .mapToDouble(s -> s.getMark() != null ? s.getMark() : 0.0)
+            .average()
+            .orElse(0.0);
+        H3 avgLabel = new H3();
+        avgLabel.add(
+          new Icon(VaadinIcon.BAR_CHART),    // o VaadinIcon.CHART
+          new Span(" Tu promedio de notas: " + String.format("%.2f", promedio))
+        );
+        add(avgLabel);
 
 
         grid.addColumn(Course::getId)
@@ -61,7 +71,10 @@ public class StudentView extends VerticalLayout {
             .setAutoWidth(true);
         grid.setSizeFull();
 
-        add(new H2("📋 Mis Cursos"), grid);
+
+        H2 coursesHeader = new H2();
+        coursesHeader.add(new Icon(VaadinIcon.BOOK), new Span(" Mis Cursos"));
+        add(coursesHeader, grid);
 
 
         List<Course> cursos = seatService
