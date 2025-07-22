@@ -9,10 +9,12 @@ import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
@@ -31,7 +33,8 @@ public class AdminEnrollmentsView extends VerticalLayout {
     private final StudentService studentService;
 
     private final Grid<Seat> grid = new Grid<>(Seat.class, false);
-    private final Button toggleHistoryBtn = new Button("📑 Ver historial");
+    private final Button     toggleHistoryBtn =
+            new Button("Ver historial", VaadinIcon.BOOK.create());
 
 
     @Autowired
@@ -51,11 +54,20 @@ public class AdminEnrollmentsView extends VerticalLayout {
 
         setSizeFull();
 
-        H2 title = new H2("📝 Gestión de Inscripciones");
+        Icon clip = VaadinIcon.CLIPBOARD_TEXT.create();
+        clip.getStyle().set("margin-right", "4px");
+        H2 titleLbl = new H2("Gestión de Inscripciones");
+        HorizontalLayout title = new HorizontalLayout(clip, titleLbl);
+        title.setAlignItems(Alignment.CENTER);
 
-        Button addBtn = new Button("➕ Nueva inscripción",
-                                   e -> openEditor(new Seat()));
+        Icon plus = VaadinIcon.PLUS_CIRCLE.create();
+        plus.getStyle().set("margin-right", "6px");
+        Button addBtn = new Button("Nueva inscripción", plus,
+                e -> openEditor(new Seat()));
+        addBtn.setIconAfterText(false);
 
+        toggleHistoryBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY,
+                                          ButtonVariant.LUMO_CONTRAST);
         toggleHistoryBtn.addClickListener(e -> toggleHistory());
 
         HorizontalLayout header = new HorizontalLayout(title, addBtn, toggleHistoryBtn);
@@ -89,11 +101,11 @@ public class AdminEnrollmentsView extends VerticalLayout {
         grid.setVisible(show);
         if (show) {
             refreshGrid();
-            toggleHistoryBtn.setText("📂 Ocultar historial");
-        } else {
-            toggleHistoryBtn.setText("📑 Ver historial");
         }
+        toggleHistoryBtn.setText(show ? "Ocultar historial"
+                                      : "Ver historial");
     }
+
 
 
     private void openEditor(Seat original) {
@@ -109,8 +121,8 @@ public class AdminEnrollmentsView extends VerticalLayout {
 
         Binder<Seat> binder = new Binder<>(Seat.class);
 
-        Select<Course> courseSelect = new Select<>();
-        courseSelect.setLabel("Curso");
+        ComboBox<Course> courseSelect = new ComboBox<>("Curso");
+        courseSelect.setPrefixComponent(VaadinIcon.BOOK.create());
         courseSelect.setItems(courseService.findAll());
         courseSelect.setItemLabelGenerator(Course::getName);
 
@@ -119,14 +131,13 @@ public class AdminEnrollmentsView extends VerticalLayout {
               .bind(Seat::getCourse, Seat::setCourse);
 
         TextField chosenStudentField = new TextField("Alumno");
+        chosenStudentField.setPrefixComponent(VaadinIcon.USER.create());
         chosenStudentField.setReadOnly(true);
         chosenStudentField.setWidthFull();
 
         Button selectStudentBtn = new Button("Seleccionar alumno");
-        selectStudentBtn.addThemeVariants(
-                ButtonVariant.LUMO_TERTIARY_INLINE,
-                ButtonVariant.LUMO_SMALL
-        );
+        selectStudentBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE,
+                                          ButtonVariant.LUMO_SMALL);
 
         final Student[] chosenStudent = { null };
         if (seat.getStudent() != null && seat.getStudent().getId() != null) {
@@ -145,13 +156,12 @@ public class AdminEnrollmentsView extends VerticalLayout {
                 new VerticalLayout(chosenStudentField, selectStudentBtn);
         studentBlock.setPadding(false);
         studentBlock.setSpacing(false);
-        studentBlock.setWidthFull();
 
         DatePicker  yearPicker = new DatePicker("Año");
         NumberField markField  = new NumberField("Nota");
+        markField.setPrefixComponent(VaadinIcon.STAR.create());
 
-        binder.forField(yearPicker)
-              .asRequired("Requerido")
+        binder.forField(yearPicker).asRequired("Requerido")
               .bind(Seat::getYear, Seat::setYear);
         binder.forField(markField)
               .bind(Seat::getMark, Seat::setMark);
@@ -159,7 +169,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
         binder.readBean(seat);
 
         Button save = new Button("Guardar", ev -> {
-
             if (chosenStudent[0] == null) {
                 Notification.show("Debes seleccionar un alumno.",
                                   3000, Notification.Position.MIDDLE);
@@ -205,6 +214,7 @@ public class AdminEnrollmentsView extends VerticalLayout {
 
         TextField search = new TextField();
         search.setPlaceholder("Buscar por nombre…");
+        search.setPrefixComponent(VaadinIcon.SEARCH.create());
         search.setWidthFull();
 
         Grid<Student> stuGrid = new Grid<>(Student.class, false);
