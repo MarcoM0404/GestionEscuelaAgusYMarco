@@ -48,21 +48,30 @@ public class AdminProfessorsView extends VerticalLayout {
 
         setSizeFull();
 
-        H2 title  = new H2("👩‍🏫 Gestión de Profesores");
-
-        Button addBtn = new Button("➕ Nuevo Profesor",
-                                   e -> openEditor(new Professor()));
+        Icon cap = VaadinIcon.ACADEMY_CAP.create();
+        cap.getStyle().set("margin-right", "4px");
+        H2 titleLbl = new H2("Gestión de Profesores");
+        HorizontalLayout title = new HorizontalLayout(cap, titleLbl);
+        title.setAlignItems(Alignment.CENTER);
 
         filter.setPlaceholder("Buscar profesor…");
+        filter.setPrefixComponent(VaadinIcon.SEARCH.create());
         filter.setClearButtonVisible(true);
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
 
+
+        Icon plus = VaadinIcon.PLUS_CIRCLE.create();
+        plus.getStyle().set("margin-right", "6px");
+        Button addBtn = new Button("Nuevo Profesor", plus,
+                e -> openEditor(new Professor()));
+        addBtn.setIconAfterText(false);
+
+        
         HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
         add(header);
 
-        /* grid */
         configureGrid();
         add(grid);
         applyFilter("");
@@ -90,8 +99,8 @@ public class AdminProfessorsView extends VerticalLayout {
 
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
-            ? profService.findAll()
-            : profService.search(term));
+                ? profService.findAll()
+                : profService.search(term));
     }
 
 
@@ -101,30 +110,47 @@ public class AdminProfessorsView extends VerticalLayout {
                 ? profService.findWithUserById(selected.getId()).orElse(selected)
                 : selected;
 
-        final Professor prof = loaded; // effectively-final
+        final Professor prof = loaded;
 
         if (prof.getAddress() == null) prof.setAddress(new Address());
         if (prof.getUser()    == null) prof.setUser(new User());
 
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle((prof.getId() == null ? "Nuevo" : "Editar")
-                              + " profesor");
+        dialog.setHeaderTitle((prof.getId() == null ? "Nuevo" : "Editar") + " profesor");
         dialog.setWidth("50%");
         dialog.setMaxWidth("800px");
 
         Binder<Professor> binder = new Binder<>(Professor.class);
 
-        TextField   name     = new TextField("Nombre");
-        TextField   email    = new TextField("Email");
-        TextField   phone    = new TextField("Teléfono");
-        NumberField salary   = new NumberField("Salario");
-        TextField   username = new TextField("Usuario");
-        PasswordField password = new PasswordField("Contraseña");
+        TextField email = new TextField("Email");
+        email.setPrefixComponent(VaadinIcon.ENVELOPE.create());
 
-        TextField street  = new TextField("Calle");
-        TextField city    = new TextField("Ciudad");
-        TextField state   = new TextField("Provincia");
+        TextField username = new TextField("Usuario");
+        username.setPrefixComponent(VaadinIcon.USER.create());
+
+        PasswordField password = new PasswordField("Contraseña");
+        password.setPrefixComponent(VaadinIcon.LOCK.create());
+
+        TextField name = new TextField("Nombre");
+        name.setPrefixComponent(VaadinIcon.USER_CHECK.create());
+
+        TextField phone = new TextField("Teléfono");
+        phone.setPrefixComponent(VaadinIcon.PHONE.create());
+
+        NumberField salary = new NumberField("Salario");
+        salary.setPrefixComponent(VaadinIcon.MONEY.create());
+
+        TextField street = new TextField("Calle");
+        street.setPrefixComponent(VaadinIcon.ROAD.create());
+
+        TextField city = new TextField("Ciudad");
+        city.setPrefixComponent(VaadinIcon.BUILDING.create());
+
+        TextField state = new TextField("Provincia");
+        state.setPrefixComponent(VaadinIcon.MAP_MARKER.create());
+
         TextField country = new TextField("País");
+        country.setPrefixComponent(VaadinIcon.GLOBE_WIRE.create());
 
         binder.forField(name).asRequired("Requerido")
               .bind(Professor::getName, Professor::setName);
@@ -168,18 +194,14 @@ public class AdminProfessorsView extends VerticalLayout {
         });
         Button cancel = new Button("Cerrar", e -> dialog.close());
 
-
         VerticalLayout col1 = new VerticalLayout(email, username, password);
-        col1.setPadding(false);
-        col1.setSpacing(false);
+        col1.setPadding(false); col1.setSpacing(false);
 
         VerticalLayout col2 = new VerticalLayout(name, phone, salary);
-        col2.setPadding(false);
-        col2.setSpacing(false);
+        col2.setPadding(false); col2.setSpacing(false);
 
         VerticalLayout col3 = new VerticalLayout(street, city, state, country);
-        col3.setPadding(false);
-        col3.setSpacing(false);
+        col3.setPadding(false); col3.setSpacing(false);
 
         HorizontalLayout columns = new HorizontalLayout(col1, col2, col3);
         columns.setWidthFull();
@@ -201,8 +223,7 @@ public class AdminProfessorsView extends VerticalLayout {
 
         ConfirmDialog cd = new ConfirmDialog();
         cd.setHeader("Eliminar profesor");
-        cd.setText("¿Estás seguro de que deseas eliminar a "
-                   + prof.getName() + "?");
+        cd.setText("¿Estás seguro de que deseas eliminar a " + prof.getName() + "?");
         cd.setCancelText("Cancelar");
         cd.setConfirmText("Eliminar");
 
