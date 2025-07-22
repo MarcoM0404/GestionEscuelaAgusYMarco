@@ -1,17 +1,11 @@
 package com.example.app.base.ui.view;
 
-import com.example.app.base.domain.Course;
-import com.example.app.base.domain.Seat;
-import com.example.app.base.domain.Student;
-import com.example.app.base.domain.Role;
-import com.example.app.base.domain.User;
-import com.example.app.base.service.CourseService;
-import com.example.app.base.service.SeatService;
-import com.example.app.base.service.ProfessorService;
-import com.example.app.base.service.StudentService;
+import com.example.app.base.domain.*;
+import com.example.app.base.service.*;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -22,185 +16,220 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.select.Select;
-import com.vaadin.flow.component.textfield.NumberField;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
-
+import java.util.List;
 import java.util.OptionalDouble;
 
 @Route(value = "professor", layout = MainLayout.class)
 public class ProfessorView extends VerticalLayout {
 
-    private final StudentService studentService;
-    private final SeatService seatService;
-    private final Grid<Course> courseGrid = new Grid<>(Course.class, false);
+	private final StudentService studentService;
+	private final SeatService seatService;
+	private final Grid<Course> courseGrid = new Grid<>(Course.class, false);
 
-    @Autowired
-    public ProfessorView(ProfessorService profService,
-                         StudentService studentService,
-                         CourseService courseService,
-                         SeatService seatService) {
-        this.studentService = studentService;
-        this.seatService = seatService;
+	@Autowired
+	public ProfessorView(ProfessorService profService, StudentService studentService, CourseService courseService,
+			SeatService seatService) {
 
-        User u = VaadinSession.getCurrent().getAttribute(User.class);
-        if (u == null || u.getRole() != Role.PROFESSOR) {
-            UI.getCurrent().navigate("login");
-            return;
-        }
+		this.studentService = studentService;
+		this.seatService = seatService;
 
-        setSizeFull();
+		User u = VaadinSession.getCurrent().getAttribute(User.class);
+		if (u == null || u.getRole() != Role.PROFESSOR) {
+			UI.getCurrent().navigate("login");
+			return;
+		}
 
+		setSizeFull();
 
-        H2 welcome = new H2();
-        welcome.add(new Icon(VaadinIcon.USER), new Text(" Bienvenido, " + u.getUsername()));
-        add(welcome);
+		H2 welcome = new H2();
+		welcome.add(new Icon(VaadinIcon.USER), new Text(" Bienvenido, " + u.getUsername()));
+		add(welcome);
 
+		Button profileBtn = new Button("Mi Perfil", e -> UI.getCurrent().navigate("professor/profile"));
+		profileBtn.setIcon(new Icon(VaadinIcon.USER_CARD));
+		add(profileBtn);
 
-        Button profileBtn = new Button("Mi Perfil", e -> UI.getCurrent().navigate("professor/profile"));
-        profileBtn.setIcon(new Icon(VaadinIcon.USER_CARD));
-        add(profileBtn);
+		courseGrid.addColumn(Course::getId).setHeader("ID").setWidth("70px");
+		courseGrid.addColumn(Course::getName).setHeader("Curso").setAutoWidth(true);
+		courseGrid.addColumn(c -> seatService.findByCourseId(c.getId()).size()).setHeader("Inscritos")
+				.setAutoWidth(true);
+		courseGrid.addColumn(c -> {
+			OptionalDouble avgOpt = seatService.findByCourseId(c.getId()).stream()
+					.mapToDouble(s -> s.getMark() != null ? s.getMark() : 0.0).average();
+			return avgOpt.isPresent() ? String.format("%.2f", avgOpt.getAsDouble()) : "—";
+		}).setHeader("Prom. Nota").setAutoWidth(true);
 
+		courseGrid.asSingleSelect().addValueChangeListener(evt -> {
+			if (evt.getValue() != null) {
+				openEnrollmentDialog(evt.getValue());
+			}
+		});
 
-        courseGrid.addColumn(Course::getId)
-                  .setHeader("ID")
-                  .setWidth("70px");
-        courseGrid.addColumn(Course::getName)
-                  .setHeader("Curso")
-                  .setAutoWidth(true);
-        courseGrid.addColumn(c -> seatService.findByCourseId(c.getId()).size())
-                  .setHeader("Inscritos")
-                  .setAutoWidth(true);
-        courseGrid.addColumn(c -> {
-            OptionalDouble avgOpt = seatService.findByCourseId(c.getId()).stream()
-                .mapToDouble(s -> s.getMark() != null ? s.getMark() : 0.0)
-                .average();
-            return avgOpt.isPresent()
-                ? String.format("%.2f", avgOpt.getAsDouble())
-                : "—";
-        }).setHeader("Prom. Nota").setAutoWidth(true);
+		courseGrid.setSizeFull();
 
+		H2 coursesHeader = new H2();
+		coursesHeader.add(new Icon(VaadinIcon.BOOK), new Text(" Mis Cursos"));
+		add(coursesHeader, courseGrid);
 
-        courseGrid.asSingleSelect().addValueChangeListener(evt -> {
-            if (evt.getValue() != null) {
-                openEnrollmentDialog(evt.getValue());
-            }
-        });
+		Long profId = profService.findByUserId(u.getId()).map(p -> p.getId()).orElse(-1L);
+		courseGrid.setItems(courseService.findByProfessorId(profId));
+	}
 
-        courseGrid.setSizeFull();
+	private void openEnrollmentDialog(Course course) {
+		Dialog dialog = new Dialog();
+		dialog.setWidth("70%");
+		dialog.setHeight("80vh");
 
+		H2 title = new H2();
+		title.add(new Icon(VaadinIcon.CLIPBOARD_TEXT), new Span(" Inscripciones: " + course.getName()));
+		dialog.add(title);
 
-        H2 coursesHeader = new H2();
-        coursesHeader.add(new Icon(VaadinIcon.BOOK), new Text(" Mis Cursos"));
-        add(coursesHeader, courseGrid);
+		final Student[] selected = new Student[1];
 
-        Long profId = profService.findByUserId(u.getId())
-                                 .map(p -> p.getId())
-                                 .orElse(-1L);
-        courseGrid.setItems(courseService.findByProfessorId(profId));
-    }
+		Button chooseStudentBtn = new Button("Seleccionar alumno", new Icon(VaadinIcon.SEARCH));
+		chooseStudentBtn.addClickListener(e -> openStudentPicker(course, selected, chooseStudentBtn));
 
-    private void openEnrollmentDialog(Course course) {
-        Dialog dialog = new Dialog();
-        dialog.setWidth("700px");
+		DatePicker inscDate = new DatePicker("Fecha Inscripción");
+		inscDate.setValue(java.time.LocalDate.now());
 
-        H2 title = new H2();
-        title.add(
-            new Icon(VaadinIcon.CLIPBOARD_TEXT),
-            new Span(" Inscripciones: " + course.getName())
-        );
+		Button enrollBtn = new Button("Inscribir", new Icon(VaadinIcon.PLUS_CIRCLE));
+		enrollBtn.addClickListener(ev -> {
+			Student s = selected[0];
+			if (s == null) {
+				Notification.show("Selecciona un alumno", 2000, Notification.Position.BOTTOM_START);
+				return;
+			}
+			Seat seat = new Seat();
+			seat.setStudent(s);
+			seat.setCourse(course);
+			seat.setYear(inscDate.getValue());
+			seatService.save(seat);
+			refreshSeatGrid(course, dialog);
+			selected[0] = null;
+			chooseStudentBtn.setText("Seleccionar alumno");
+		});
 
+		HorizontalLayout toolbar = new HorizontalLayout(chooseStudentBtn, inscDate, enrollBtn);
+		toolbar.setWidthFull();
+		toolbar.setSpacing(true);
+		toolbar.setAlignItems(Alignment.END);
+		toolbar.expand(inscDate);
 
-        Select<Student> studentSelect = new Select<>();
-        studentSelect.setLabel("Alumno");
-        studentSelect.setItems(studentService.findAll());
-        studentSelect.setItemLabelGenerator(Student::getName);
+		Grid<Seat> seatGrid = new Grid<>(Seat.class, false);
+		seatGrid.addColumn(Seat::getId).setHeader("ID").setWidth("50px");
+		seatGrid.addColumn(s -> s.getStudent().getName()).setHeader("Alumno").setAutoWidth(true);
+		seatGrid.addColumn(Seat::getYear).setHeader("Inscripción");
+		seatGrid.addColumn(Seat::getEvaluationDate).setHeader("Evaluación");
+		seatGrid.addColumn(Seat::getMark).setHeader("Nota");
+		seatGrid.addComponentColumn(seat -> {
+			Icon trash = new Icon(VaadinIcon.TRASH);
+			Button del = new Button(trash);
+			del.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_TERTIARY_INLINE);
+			del.addClickListener(ev -> {
+				seatService.deleteById(seat.getId());
+				refreshSeatGrid(course, dialog);
+			});
+			return del;
+		}).setHeader("Quitar");
+		seatGrid.asSingleSelect().addValueChangeListener(evt -> {
+			if (evt.getValue() != null)
+				openEditSeatDialog(evt.getValue(), seatGrid);
+		});
 
-        DatePicker inscDate = new DatePicker("Fecha Inscripción");
-        inscDate.setValue(java.time.LocalDate.now());
+		seatGrid.setSizeFull();
 
-        Button enrollBtn = new Button("Inscribir", e -> {
-            Student s = studentSelect.getValue();
-            if (s == null) {
-                Notification.show("Selecciona un alumno", 2000, Notification.Position.BOTTOM_START);
-                return;
-            }
-            Seat seat = new Seat();
-            seat.setStudent(s);
-            seat.setCourse(course);
-            seat.setYear(inscDate.getValue());
-            seatService.save(seat);
-            refreshSeatGrid(course, dialog);
-        });
-        enrollBtn.setIcon(new Icon(VaadinIcon.PLUS_CIRCLE));
+		dialog.add(toolbar, seatGrid);
+		dialog.open();
+		refreshSeatGrid(course, dialog);
+	}
 
-        HorizontalLayout toolbar = new HorizontalLayout(studentSelect, inscDate, enrollBtn);
+	private void openStudentPicker(Course course, Student[] selected, Button chooseStudentBtn) {
 
-        Grid<Seat> seatGrid = new Grid<>(Seat.class, false);
-        seatGrid.addColumn(Seat::getId).setHeader("ID").setWidth("50px");
-        seatGrid.addColumn(s -> s.getStudent().getName()).setHeader("Alumno").setAutoWidth(true);
-        seatGrid.addColumn(Seat::getYear).setHeader("Inscripción");
-        seatGrid.addColumn(Seat::getEvaluationDate).setHeader("Evaluación");
-        seatGrid.addColumn(Seat::getMark).setHeader("Nota");
+		Dialog picker = new Dialog();
+		picker.setWidth("450px");
+		picker.setModal(true);
 
-        seatGrid.addComponentColumn(seat -> {
-            Button del = new Button(new Icon(VaadinIcon.TRASH));
-            del.addClickListener(ev -> {
-                seatService.deleteById(seat.getId());
-                refreshSeatGrid(course, dialog);
-            });
-            return del;
-        }).setHeader("Quitar");
+		TextField filterField = new TextField();
+		filterField.setPlaceholder("Buscar alumno…");
+		filterField.setClearButtonVisible(true);
+		filterField.setPrefixComponent(new Icon(VaadinIcon.SEARCH));
+		filterField.setWidthFull();
 
-        seatGrid.asSingleSelect().addValueChangeListener(evt -> {
-            if (evt.getValue() != null) {
-                openEditSeatDialog(evt.getValue(), seatGrid);
-            }
-        });
+		Grid<Student> grid = new Grid<>(Student.class, false);
+		grid.addColumn(Student::getId).setHeader("ID").setWidth("70px");
+		grid.addColumn(Student::getName).setHeader("Nombre").setAutoWidth(true);
 
-        seatGrid.setSizeFull();
-        dialog.add(toolbar, seatGrid);
-        dialog.open();
-        refreshSeatGrid(course, dialog);
-    }
+		List<Long> already = seatService.findByCourseId(course.getId()).stream().map(seat -> seat.getStudent().getId())
+				.toList();
 
-    @SuppressWarnings("unchecked")
-    private void refreshSeatGrid(Course course, Dialog dialog) {
-        dialog.getChildren()
-              .filter(c -> c instanceof Grid)
-              .map(c -> (Grid<Seat>) c)
-              .findFirst()
-              .ifPresent(g -> g.setItems(seatService.findByCourseId(course.getId())));
-    }
+		List<Student> candidates = studentService.findAll().stream().filter(st -> !already.contains(st.getId()))
+				.toList();
 
-    private void openEditSeatDialog(Seat seat, Grid<Seat> seatGrid) {
-        Dialog d = new Dialog();
-        d.setWidth("400px");
+		ListDataProvider<Student> provider = new ListDataProvider<>(candidates);
+		grid.setDataProvider(provider);
 
-        H2 editTitle = new H2();
-        editTitle.add(new Icon(VaadinIcon.EDIT), new Text(" Editar Inscripción"));
-        d.add(editTitle);
+		filterField.addValueChangeListener(e -> {
+			String term = e.getValue().trim().toLowerCase();
+			provider.setFilter(stu -> term.isEmpty() || stu.getName().toLowerCase().contains(term)
+					|| String.valueOf(stu.getId()).contains(term));
+		});
 
-        NumberField markField = new NumberField("Nota");
-        DatePicker evalDate = new DatePicker("Fecha Evaluación");
-        markField.setValue(seat.getMark());
-        evalDate.setValue(seat.getEvaluationDate());
+		grid.addItemDoubleClickListener(ev -> {
+			selected[0] = ev.getItem();
+			chooseStudentBtn.setText("Alumno: " + selected[0].getName());
+			picker.close();
+		});
 
-        Button save = new Button("Guardar", e -> {
-            seat.setMark(markField.getValue());
-            seat.setEvaluationDate(evalDate.getValue());
-            seatService.save(seat);
-            seatGrid.getDataProvider().refreshAll();
-            d.close();
-        });
-        save.setIcon(new Icon(VaadinIcon.CHECK));
+		VerticalLayout content = new VerticalLayout(filterField, grid);
+		content.setPadding(false);
+		content.setSpacing(false);
+		content.setSizeFull();
 
-        Button cancel = new Button("Cancelar", e -> d.close());
-        cancel.setIcon(new Icon(VaadinIcon.CLOSE));
+		picker.add(content);
+		picker.open();
+	}
 
-        d.add(new VerticalLayout(markField, evalDate, new HorizontalLayout(save, cancel)));
-        d.open();
-    }
+	@SuppressWarnings("unchecked")
+	private void refreshSeatGrid(Course course, Dialog dialog) {
+		dialog.getChildren().filter(c -> c instanceof Grid).map(c -> (Grid<Seat>) c).findFirst()
+				.ifPresent(g -> g.setItems(seatService.findByCourseId(course.getId())));
+	}
+
+	private void openEditSeatDialog(Seat seat, Grid<Seat> seatGrid) {
+	    Dialog d = new Dialog();
+	    d.setWidth("400px");
+
+	    H2 editTitle = new H2();
+	    editTitle.add(new Icon(VaadinIcon.EDIT), new Text(" Editar Inscripción"));
+	    d.add(editTitle);
+
+	    com.vaadin.flow.component.textfield.NumberField markField =
+	        new com.vaadin.flow.component.textfield.NumberField("Nota");
+	    markField.setPrefixComponent(new Icon(VaadinIcon.STAR));
+	    DatePicker evalDate = new DatePicker("Fecha Evaluación");
+	    markField.setValue(seat.getMark());
+	    evalDate.setValue(seat.getEvaluationDate());
+
+	    Button save = new Button("Guardar", e -> {
+	        seat.setMark(markField.getValue());
+	        seat.setEvaluationDate(evalDate.getValue());
+	        seatService.save(seat);
+	        seatGrid.getDataProvider().refreshAll();
+	        d.close();
+	    });
+	    save.setIcon(new Icon(VaadinIcon.CHECK));
+
+	    Button cancel = new Button("Cancelar", e -> d.close());
+	    cancel.setIcon(new Icon(VaadinIcon.CLOSE));
+
+	    d.add(new VerticalLayout(markField, evalDate, new HorizontalLayout(save, cancel)));
+	    d.open();  // ← ¡AHÍ VA EL PUNTO Y COMA!
+
+	} 
+
 }
