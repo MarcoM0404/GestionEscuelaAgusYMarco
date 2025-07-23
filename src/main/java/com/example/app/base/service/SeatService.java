@@ -49,4 +49,5 @@ public class SeatService {
     public List<Seat> findByStudentName(String name)    { return repo.findByStudentNameContainingIgnoreCase(name); }
     public List<Seat> findByStudentNumber(UUID number)  { return repo.findByStudentStudentNumber(number); }
     public long countByCourseId(Long courseId)          { return repo.countByCourseId(courseId); }
+    public List<Seat> findAllOrdered() 					{return repo.findAllByOrderByYearDesc(); }
 }

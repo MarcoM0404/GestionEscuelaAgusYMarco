@@ -93,7 +93,7 @@ public class AdminEnrollmentsView extends VerticalLayout {
     }
 
     private void refreshGrid() {
-        if (grid.isVisible()) grid.setItems(seatService.findAll());
+        if (grid.isVisible()) grid.setItems(seatService.findAllOrdered());
     }
 
     private void toggleHistory() {

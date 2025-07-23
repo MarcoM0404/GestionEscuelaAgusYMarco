@@ -14,6 +14,7 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
     List<Seat> findByStudentNameContainingIgnoreCase(String name);
     List<Seat> findByStudentStudentNumber(UUID studentNumber);
     List<Seat> findByCourseId(Long courseId);
+    List<Seat> findAllByOrderByYearDesc();
 
     long countByCourseId(Long courseId);
 
