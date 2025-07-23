@@ -50,10 +50,6 @@ public class ProfessorView extends VerticalLayout {
 		welcome.add(new Icon(VaadinIcon.USER), new Text(" Bienvenido, " + u.getUsername()));
 		add(welcome);
 
-		Button profileBtn = new Button("Mi Perfil", e -> UI.getCurrent().navigate("professor/profile"));
-		profileBtn.setIcon(new Icon(VaadinIcon.USER_CARD));
-		add(profileBtn);
-
 		courseGrid.addColumn(Course::getId).setHeader("ID").setWidth("70px");
 		courseGrid.addColumn(Course::getName).setHeader("Curso").setAutoWidth(true);
 		courseGrid.addColumn(c -> seatService.findByCourseId(c.getId()).size()).setHeader("Inscritos")
@@ -163,6 +159,10 @@ public class ProfessorView extends VerticalLayout {
 		Grid<Student> grid = new Grid<>(Student.class, false);
 		grid.addColumn(Student::getId).setHeader("ID").setWidth("70px");
 		grid.addColumn(Student::getName).setHeader("Nombre").setAutoWidth(true);
+		grid.addColumn(s -> s.getStudentNumber().toString())
+	    .setHeader("Matrícula")
+	    .setAutoWidth(true);
+
 
 		List<Long> already = seatService.findByCourseId(course.getId()).stream().map(seat -> seat.getStudent().getId())
 				.toList();
