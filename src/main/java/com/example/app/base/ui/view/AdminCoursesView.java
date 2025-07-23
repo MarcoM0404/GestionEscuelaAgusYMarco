@@ -6,6 +6,7 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
+import com.vaadin.flow.component.datepicker.DatePicker;          // ⬅️ NUEVO
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
@@ -21,6 +22,8 @@ import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 
+import java.time.LocalDate;                                      // ⬅️ NUEVO
+
 @Route(value = "admin/courses", layout = MainLayout.class)
 public class AdminCoursesView extends VerticalLayout {
 
@@ -29,7 +32,7 @@ public class AdminCoursesView extends VerticalLayout {
     private final SeatService      seatService;
 
     private final Grid<Course> grid   = new Grid<>(Course.class, false);
-    private final TextField    filter = new TextField();          // ya instanciado aquí
+    private final TextField    filter = new TextField();
 
     public AdminCoursesView(CourseService courseService,
                             ProfessorService profService,
@@ -54,7 +57,7 @@ public class AdminCoursesView extends VerticalLayout {
         title.setAlignItems(Alignment.CENTER);
 
         filter.setPlaceholder("Buscar curso…");
-        filter.setPrefixComponent(VaadinIcon.SEARCH.create());    // lupita
+        filter.setPrefixComponent(VaadinIcon.SEARCH.create());
         filter.setClearButtonVisible(true);
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
 
@@ -73,7 +76,6 @@ public class AdminCoursesView extends VerticalLayout {
         add(grid);
         applyFilter("");
     }
-
 
     private void configureGrid() {
 
@@ -109,6 +111,9 @@ public class AdminCoursesView extends VerticalLayout {
             : courseService.search(term));
     }
 
+    /* --------------------------------------------------------------------- */
+    /* ------------------- CRUD DE CURSOS (sin cambios) -------------------- */
+    /* --------------------------------------------------------------------- */
 
     private void openEditor(Course course) {
 
@@ -130,8 +135,7 @@ public class AdminCoursesView extends VerticalLayout {
         profSelect.setItems(profService.findAll());
         profSelect.setItemLabelGenerator(Professor::getName);
 
-        binder.forField(profSelect)
-              .bind(Course::getProfessor, Course::setProfessor);
+        binder.forField(profSelect).bind(Course::getProfessor, Course::setProfessor);
 
         Button save = new Button("Guardar", e -> {
             if (binder.writeBeanIfValid(course)) {
@@ -146,14 +150,13 @@ public class AdminCoursesView extends VerticalLayout {
         actions.setWidthFull();
         actions.setJustifyContentMode(JustifyContentMode.END);
 
-        dialog.add(new VerticalLayout(
-                nameField,
-                profSelect,
-                actions
-        ));
+        dialog.add(new VerticalLayout(nameField, profSelect, actions));
         dialog.open();
     }
 
+    /* --------------------------------------------------------------------- */
+    /* ---------------- Diálogo de inscriptos / notas ---------------------- */
+    /* --------------------------------------------------------------------- */
 
     private void openSeatsDialog(Course course) {
 
@@ -211,27 +214,49 @@ public class AdminCoursesView extends VerticalLayout {
         dlg.open();
     }
 
+    /* --------------------------------------------------------------------- */
+    /* -------- MODIFICAR NOTA (ahora con DatePicker para la fecha) -------- */
+    /* --------------------------------------------------------------------- */
+
     private void openEditMarkDialog(Seat seat, Grid<Seat> seatsGrid) {
 
         Dialog d = new Dialog();
         d.setHeaderTitle("Modificar nota");
 
         NumberField markField = new NumberField("Nueva nota");
-        markField.setMin(0); markField.setMax(10);
+        markField.setMin(0);
+        markField.setMax(10);
         markField.setValue(seat.getMark() != null ? seat.getMark() : 0.0);
+
+        DatePicker datePicker = new DatePicker("Fecha de la nota");
+        datePicker.setValue(
+            seat.getEvaluationDate() != null               // ⬅️ usa el getter real
+                ? seat.getEvaluationDate()
+                : LocalDate.now()
+        );
+        datePicker.setMax(LocalDate.now());                // evita fechas futuras
 
         Button save = new Button("Guardar", e -> {
             seat.setMark(markField.getValue());
+            seat.setEvaluationDate(datePicker.getValue()); // ⬅️ usa el setter real
             seatService.save(seat);
             seatsGrid.getDataProvider().refreshItem(seat);
             d.close();
         });
+
         Button cancel = new Button("Cancelar", e -> d.close());
 
-        d.add(new VerticalLayout(markField,
-                                 new HorizontalLayout(save, cancel)));
+        d.add(new VerticalLayout(
+                markField,
+                datePicker,
+                new HorizontalLayout(save, cancel)
+        ));
         d.open();
     }
+
+    /* --------------------------------------------------------------------- */
+    /* ---------------- Confirmaciones de eliminación ---------------------- */
+    /* --------------------------------------------------------------------- */
 
     private void confirmDeleteSeat(Seat seat, Grid<Seat> seatsGrid) {
 
