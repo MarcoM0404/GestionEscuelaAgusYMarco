@@ -21,8 +21,7 @@ import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
-
-import java.time.LocalDate;                                      // ⬅️ NUEVO
+import java.time.LocalDate;
 
 @Route(value = "admin/courses", layout = MainLayout.class)
 public class AdminCoursesView extends VerticalLayout {
@@ -111,9 +110,6 @@ public class AdminCoursesView extends VerticalLayout {
             : courseService.search(term));
     }
 
-    /* --------------------------------------------------------------------- */
-    /* ------------------- CRUD DE CURSOS (sin cambios) -------------------- */
-    /* --------------------------------------------------------------------- */
 
     private void openEditor(Course course) {
 
@@ -154,9 +150,6 @@ public class AdminCoursesView extends VerticalLayout {
         dialog.open();
     }
 
-    /* --------------------------------------------------------------------- */
-    /* ---------------- Diálogo de inscriptos / notas ---------------------- */
-    /* --------------------------------------------------------------------- */
 
     private void openSeatsDialog(Course course) {
 
@@ -214,9 +207,6 @@ public class AdminCoursesView extends VerticalLayout {
         dlg.open();
     }
 
-    /* --------------------------------------------------------------------- */
-    /* -------- MODIFICAR NOTA (ahora con DatePicker para la fecha) -------- */
-    /* --------------------------------------------------------------------- */
 
     private void openEditMarkDialog(Seat seat, Grid<Seat> seatsGrid) {
 
@@ -230,15 +220,15 @@ public class AdminCoursesView extends VerticalLayout {
 
         DatePicker datePicker = new DatePicker("Fecha de la nota");
         datePicker.setValue(
-            seat.getEvaluationDate() != null               // ⬅️ usa el getter real
+            seat.getEvaluationDate() != null
                 ? seat.getEvaluationDate()
                 : LocalDate.now()
         );
-        datePicker.setMax(LocalDate.now());                // evita fechas futuras
+        datePicker.setMax(LocalDate.now());
 
         Button save = new Button("Guardar", e -> {
             seat.setMark(markField.getValue());
-            seat.setEvaluationDate(datePicker.getValue()); // ⬅️ usa el setter real
+            seat.setEvaluationDate(datePicker.getValue());
             seatService.save(seat);
             seatsGrid.getDataProvider().refreshItem(seat);
             d.close();
@@ -254,9 +244,6 @@ public class AdminCoursesView extends VerticalLayout {
         d.open();
     }
 
-    /* --------------------------------------------------------------------- */
-    /* ---------------- Confirmaciones de eliminación ---------------------- */
-    /* --------------------------------------------------------------------- */
 
     private void confirmDeleteSeat(Seat seat, Grid<Seat> seatsGrid) {
 
