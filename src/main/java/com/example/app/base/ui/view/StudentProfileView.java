@@ -54,15 +54,31 @@ public class StudentProfileView extends VerticalLayout {
             Binder<Student> binder = new Binder<>(Student.class);
 
             TextField name    = new TextField("Nombre");
+            name.setPrefixComponent(new Icon(VaadinIcon.USER));
+
             TextField email   = new TextField("Email");
+            email.setPrefixComponent(new Icon(VaadinIcon.ENVELOPE));
+
             TextField phone   = new TextField("Teléfono");
+            phone.setPrefixComponent(new Icon(VaadinIcon.PHONE));
+
             TextField street  = new TextField("Calle");
-            TextField city    = new TextField("Ciudad");
-            TextField state   = new TextField("Provincia");
-            TextField country = new TextField("País");
-
-
             street.setPrefixComponent(new Icon(VaadinIcon.MAP_MARKER));
+
+            TextField city    = new TextField("Ciudad");
+            city.setPrefixComponent(new Icon(VaadinIcon.BUILDING));
+
+            TextField state   = new TextField("Provincia");
+            state.setPrefixComponent(new Icon(VaadinIcon.FLAG));
+
+            TextField country = new TextField("País");
+            country.setPrefixComponent(new Icon(VaadinIcon.GLOBE));       // ← aquí
+
+            FormLayout form = new FormLayout(
+                name, email, phone,
+                street, city, state, country
+            );
+
 
             binder.forField(name)
                   .asRequired("Requerido")
@@ -82,10 +98,6 @@ public class StudentProfileView extends VerticalLayout {
             binder.forField(country)
                   .bind(s -> s.getAddress().getCountry(), (s,v) -> s.getAddress().setCountry(v));
 
-            FormLayout form = new FormLayout(
-                name, email, phone,
-                street, city, state, country
-            );
 
             binder.readBean(student);
 

@@ -10,7 +10,10 @@ import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,12 +48,6 @@ public class StudentView extends VerticalLayout {
         );
         add(welcome);
 
-
-        Button profileBtn = new Button("Mi Perfil", e -> UI.getCurrent().navigate("student/profile"));
-        profileBtn.setIcon(new Icon(VaadinIcon.USER_CARD));
-        add(profileBtn);
-
-
         double promedio = seatService.findByStudentUserId(u.getId()).stream()
             .mapToDouble(s -> s.getMark() != null ? s.getMark() : 0.0)
             .average()
@@ -62,7 +59,15 @@ public class StudentView extends VerticalLayout {
         );
         add(avgLabel);
 
+        List<Course> cursos = seatService
+            .findByStudentUserId(u.getId())
+            .stream()
+            .map(Seat::getCourse)
+            .distinct()
+            .toList();
 
+        ListDataProvider<Course> provider = new ListDataProvider<>(cursos);
+        grid.setDataProvider(provider);
         grid.addColumn(Course::getId)
             .setHeader("ID")
             .setWidth("70px");
@@ -71,18 +76,22 @@ public class StudentView extends VerticalLayout {
             .setAutoWidth(true);
         grid.setSizeFull();
 
+        TextField filter = new TextField();
+        filter.setPlaceholder("Buscar curso…");
+        filter.setPrefixComponent(new Icon(VaadinIcon.SEARCH));
+        filter.setClearButtonVisible(true);
+        filter.addValueChangeListener(e -> {
+            String term = e.getValue().trim().toLowerCase();
+            provider.setFilter(course ->
+                course.getName().toLowerCase().contains(term)
+            );
+        });
 
         H2 coursesHeader = new H2();
-        coursesHeader.add(new Icon(VaadinIcon.BOOK), new Span(" Mis Cursos"));
-        add(coursesHeader, grid);
-
-
-        List<Course> cursos = seatService
-            .findByStudentUserId(u.getId())
-            .stream()
-            .map(Seat::getCourse)
-            .distinct()
-            .toList();
-        grid.setItems(cursos);
+        coursesHeader.add(new Icon(VaadinIcon.BOOK),
+                          new Span(" Mis Cursos"));
+        HorizontalLayout header = new HorizontalLayout(coursesHeader, filter);
+        header.setAlignItems(Alignment.BASELINE);
+        add(header, grid);
     }
 }

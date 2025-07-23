@@ -228,7 +228,7 @@ public class ProfessorView extends VerticalLayout {
 	    cancel.setIcon(new Icon(VaadinIcon.CLOSE));
 
 	    d.add(new VerticalLayout(markField, evalDate, new HorizontalLayout(save, cancel)));
-	    d.open();  // ← ¡AHÍ VA EL PUNTO Y COMA!
+	    d.open();
 
 	} 
 
