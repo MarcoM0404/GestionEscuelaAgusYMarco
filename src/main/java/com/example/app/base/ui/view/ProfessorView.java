@@ -70,10 +70,31 @@ public class ProfessorView extends VerticalLayout {
 
 		H2 coursesHeader = new H2();
 		coursesHeader.add(new Icon(VaadinIcon.BOOK), new Text(" Mis Cursos"));
-		add(coursesHeader, courseGrid);
 
-		Long profId = profService.findByUserId(u.getId()).map(p -> p.getId()).orElse(-1L);
-		courseGrid.setItems(courseService.findByProfessorId(profId));
+		Long profId = profService.findByUserId(u.getId())
+		                         .map(Professor::getId)
+		                         .orElse(-1L);
+		List<Course> cursos = courseService.findByProfessorId(profId);
+		ListDataProvider<Course> provider = new ListDataProvider<>(cursos);
+		courseGrid.setDataProvider(provider);
+
+		TextField filter = new TextField();
+		filter.setPlaceholder("Buscar curso…");
+		filter.setPrefixComponent(new Icon(VaadinIcon.SEARCH));
+		filter.setClearButtonVisible(true);
+		filter.addValueChangeListener(e -> {
+		    String term = e.getValue().trim().toLowerCase();
+		    provider.setFilter(course ->
+		        course.getName().toLowerCase().contains(term)
+		    );
+		});
+
+		HorizontalLayout header = new HorizontalLayout(coursesHeader, filter);
+		header.setAlignItems(Alignment.BASELINE);
+		header.setSpacing(true);
+
+		add(header, courseGrid);
+
 	}
 
 	private void openEnrollmentDialog(Course course) {
