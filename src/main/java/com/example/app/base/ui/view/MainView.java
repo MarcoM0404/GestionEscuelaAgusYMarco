@@ -10,7 +10,7 @@ import jakarta.annotation.security.PermitAll;
 
 
 @Route
-@PermitAll // When security is enabled, allow all authenticated users
+@PermitAll 
 public final class MainView extends Main {
 
 
