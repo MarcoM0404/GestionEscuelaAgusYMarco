@@ -2,9 +2,11 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
+import com.example.app.security.AppRoles;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
@@ -14,17 +16,19 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.security.RolesAllowed;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+@RolesAllowed("ADMIN")
+@PageTitle("Inscripciones")
 @Route(value = "admin/enrollments", layout = MainLayout.class)
 public class AdminEnrollmentsView extends VerticalLayout {
 
@@ -36,8 +40,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
     private final Button     toggleHistoryBtn =
             new Button("Ver historial", VaadinIcon.BOOK.create());
 
-
-    @Autowired
     public AdminEnrollmentsView(SeatService seatService,
                                 CourseService courseService,
                                 StudentService studentService) {
@@ -47,13 +49,20 @@ public class AdminEnrollmentsView extends VerticalLayout {
         this.studentService = studentService;
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
-        if (u == null || u.getRole() != Role.ADMIN) {
+        if (u == null || u.getRole() != AppRoles.ADMIN) {
             UI.getCurrent().navigate("login");
             return;
         }
 
         setSizeFull();
+        buildHeader();
+        configureGrid();
+        grid.setVisible(false);
+        add(grid);
+    }
 
+
+    private void buildHeader() {
         Icon clip = VaadinIcon.CLIPBOARD_TEXT.create();
         clip.getStyle().set("margin-right", "4px");
         H2 titleLbl = new H2("Gestión de Inscripciones");
@@ -61,7 +70,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
         title.setAlignItems(Alignment.CENTER);
 
         Icon plus = VaadinIcon.PLUS_CIRCLE.create();
-        plus.getStyle().set("margin-right", "6px");
         Button addBtn = new Button("Nueva inscripción", plus,
                 e -> openEditor(new Seat()));
         addBtn.setIconAfterText(false);
@@ -70,14 +78,11 @@ public class AdminEnrollmentsView extends VerticalLayout {
                                           ButtonVariant.LUMO_CONTRAST);
         toggleHistoryBtn.addClickListener(e -> toggleHistory());
 
-        HorizontalLayout header = new HorizontalLayout(title, addBtn, toggleHistoryBtn);
+        HorizontalLayout header =
+                new HorizontalLayout(title, addBtn, toggleHistoryBtn);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
         add(header);
-
-        configureGrid();
-        grid.setVisible(false);
-        add(grid);
     }
 
 
@@ -87,7 +92,6 @@ public class AdminEnrollmentsView extends VerticalLayout {
         grid.addColumn(s -> s.getStudent().getName()).setHeader("Alumno");
         grid.addColumn(Seat::getYear).setHeader("Año");
         grid.addColumn(Seat::getMark).setHeader("Nota");
-
         grid.setSizeFull();
         grid.addItemDoubleClickListener(ev -> openEditor(ev.getItem()));
     }
@@ -99,19 +103,14 @@ public class AdminEnrollmentsView extends VerticalLayout {
     private void toggleHistory() {
         boolean show = !grid.isVisible();
         grid.setVisible(show);
-        if (show) {
-            refreshGrid();
-        }
-        toggleHistoryBtn.setText(show ? "Ocultar historial"
-                                      : "Ver historial");
+        if (show) refreshGrid();
+        toggleHistoryBtn.setText(show ? "Ocultar historial" : "Ver historial");
     }
-
 
 
     private void openEditor(Seat original) {
 
         final Seat seat = original;
-
         if (seat.getStudent() == null) seat.setStudent(new Student());
 
         Dialog dialog = new Dialog();
@@ -125,15 +124,13 @@ public class AdminEnrollmentsView extends VerticalLayout {
         courseSelect.setPrefixComponent(VaadinIcon.BOOK.create());
         courseSelect.setItems(courseService.findAll());
         courseSelect.setItemLabelGenerator(Course::getName);
-
-        binder.forField(courseSelect)
-              .asRequired("Requerido")
+        binder.forField(courseSelect).asRequired("Requerido")
               .bind(Seat::getCourse, Seat::setCourse);
 
         TextField chosenStudentField = new TextField("Alumno");
-        chosenStudentField.setPrefixComponent(VaadinIcon.USER.create());
         chosenStudentField.setReadOnly(true);
         chosenStudentField.setWidthFull();
+        chosenStudentField.setPrefixComponent(VaadinIcon.USER.create());
 
         Button selectStudentBtn = new Button("Seleccionar alumno");
         selectStudentBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE,
@@ -152,20 +149,16 @@ public class AdminEnrollmentsView extends VerticalLayout {
                 })
         );
 
-        VerticalLayout studentBlock =
-                new VerticalLayout(chosenStudentField, selectStudentBtn);
-        studentBlock.setPadding(false);
-        studentBlock.setSpacing(false);
+        VerticalLayout studentBlock = new VerticalLayout(chosenStudentField, selectStudentBtn);
+        studentBlock.setPadding(false); studentBlock.setSpacing(false);
 
-        DatePicker  yearPicker = new DatePicker("Año");
-        NumberField markField  = new NumberField("Nota");
+        DatePicker yearPicker = new DatePicker("Año");
+        NumberField markField = new NumberField("Nota");
         markField.setPrefixComponent(VaadinIcon.STAR.create());
 
         binder.forField(yearPicker).asRequired("Requerido")
               .bind(Seat::getYear, Seat::setYear);
-        binder.forField(markField)
-              .bind(Seat::getMark, Seat::setMark);
-
+        binder.forField(markField).bind(Seat::getMark, Seat::setMark);
         binder.readBean(seat);
 
         Button save = new Button("Guardar", ev -> {
@@ -194,13 +187,8 @@ public class AdminEnrollmentsView extends VerticalLayout {
         actions.setWidthFull();
         actions.setJustifyContentMode(JustifyContentMode.END);
 
-        dialog.add(new VerticalLayout(
-                courseSelect,
-                studentBlock,
-                yearPicker,
-                markField,
-                actions
-        ));
+        dialog.add(new VerticalLayout(courseSelect, studentBlock,
+                                      yearPicker, markField, actions));
         dialog.open();
     }
 
@@ -232,11 +220,9 @@ public class AdminEnrollmentsView extends VerticalLayout {
             if (term.isBlank()) {
                 stuGrid.setItems(all);
             } else {
-                stuGrid.setItems(
-                        all.stream()
-                           .filter(s -> s.getName().toLowerCase().contains(term))
-                           .collect(Collectors.toList())
-                );
+                stuGrid.setItems(all.stream()
+                          .filter(s -> s.getName().toLowerCase().contains(term))
+                          .collect(Collectors.toList()));
             }
         });
 
@@ -246,9 +232,7 @@ public class AdminEnrollmentsView extends VerticalLayout {
         });
 
         VerticalLayout content = new VerticalLayout(search, stuGrid);
-        content.setSizeFull();
-        content.setPadding(false);
-        content.setSpacing(false);
+        content.setSizeFull(); content.setPadding(false); content.setSpacing(false);
         content.expand(stuGrid);
 
         picker.add(content);
