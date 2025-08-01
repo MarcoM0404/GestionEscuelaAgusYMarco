@@ -2,11 +2,12 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
+import com.example.app.security.AppRoles;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
-import com.vaadin.flow.component.datepicker.DatePicker;          // ⬅️ NUEVO
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
@@ -19,10 +20,14 @@ import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
+import jakarta.annotation.security.RolesAllowed;
 import java.time.LocalDate;
 
+@RolesAllowed("ADMIN")
+@PageTitle("Cursos")
 @Route(value = "admin/courses", layout = MainLayout.class)
 public class AdminCoursesView extends VerticalLayout {
 
@@ -41,14 +46,23 @@ public class AdminCoursesView extends VerticalLayout {
         this.profService   = profService;
         this.seatService   = seatService;
 
+     
         User u = VaadinSession.getCurrent().getAttribute(User.class);
-        if (u == null || u.getRole() != Role.ADMIN) {
+        if (u == null || u.getRole() != AppRoles.ADMIN) {
             UI.getCurrent().navigate("login");
             return;
         }
 
         setSizeFull();
+        buildHeader();
+        configureGrid();
+        add(grid);
+        applyFilter("");
+    }
 
+    
+
+    private void buildHeader() {
         Icon bookIcon = VaadinIcon.BOOK.create();
         bookIcon.getStyle().set("margin-right", "4px");
         H2   titleLbl = new H2("Gestión de Cursos");
@@ -61,7 +75,6 @@ public class AdminCoursesView extends VerticalLayout {
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
 
         Icon plus = VaadinIcon.PLUS_CIRCLE.create();
-        plus.getStyle().set("margin-right", "6px");
         Button addBtn = new Button("Nuevo Curso", plus,
                 e -> openEditor(new Course()));
         addBtn.setIconAfterText(false);
@@ -70,32 +83,20 @@ public class AdminCoursesView extends VerticalLayout {
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
         add(header);
-
-        configureGrid();
-        add(grid);
-        applyFilter("");
     }
 
+   
+
     private void configureGrid() {
-
-        grid.addColumn(Course::getId)
-            .setHeader("ID").setWidth("70px");
-
-        grid.addColumn(Course::getName)
-            .setHeader("Nombre").setAutoWidth(true);
-
-        grid.addColumn(c -> c.getProfessor() != null
-                ? c.getProfessor().getName()
-                : "(sin prof.)")
+        grid.addColumn(Course::getId).setHeader("ID").setWidth("70px");
+        grid.addColumn(Course::getName).setHeader("Nombre").setAutoWidth(true);
+        grid.addColumn(c -> c.getProfessor() != null ? c.getProfessor().getName() : "(sin prof.)")
             .setHeader("Profesor");
-
         grid.addColumn(c -> seatService.countByCourseId(c.getId()))
             .setHeader("Inscriptos").setWidth("120px");
-
         grid.addColumn(new ComponentRenderer<>(course -> {
             Icon trash = VaadinIcon.TRASH.create();
-            trash.getStyle().set("cursor", "pointer")
-                            .set("color", "var(--lumo-error-color)");
+            trash.getStyle().set("cursor", "pointer").set("color", "var(--lumo-error-color)");
             trash.addClickListener(e -> confirmDeleteCourse(course));
             return trash;
         })).setHeader("").setAutoWidth(true).setFlexGrow(0);
@@ -110,9 +111,9 @@ public class AdminCoursesView extends VerticalLayout {
             : courseService.search(term));
     }
 
+   
 
     private void openEditor(Course course) {
-
         Dialog dialog = new Dialog();
         dialog.setWidth("400px");
         dialog.setHeaderTitle(course.getId() == null ? "Nuevo curso" : "Editar curso");
@@ -121,16 +122,12 @@ public class AdminCoursesView extends VerticalLayout {
 
         TextField nameField = new TextField("Nombre");
         nameField.setPrefixComponent(VaadinIcon.BOOK.create());
-
-        binder.forField(nameField)
-              .asRequired("El nombre es obligatorio")
-              .bind(Course::getName, Course::setName);
+        binder.forField(nameField).asRequired("Obligatorio").bind(Course::getName, Course::setName);
 
         ComboBox<Professor> profSelect = new ComboBox<>("Profesor");
         profSelect.setPrefixComponent(VaadinIcon.ACADEMY_CAP.create());
         profSelect.setItems(profService.findAll());
         profSelect.setItemLabelGenerator(Professor::getName);
-
         binder.forField(profSelect).bind(Course::getProfessor, Course::setProfessor);
 
         Button save = new Button("Guardar", e -> {
@@ -141,7 +138,6 @@ public class AdminCoursesView extends VerticalLayout {
             }
         });
         Button cancel = new Button("Cerrar", e -> dialog.close());
-
         HorizontalLayout actions = new HorizontalLayout(save, cancel);
         actions.setWidthFull();
         actions.setJustifyContentMode(JustifyContentMode.END);
@@ -150,48 +146,36 @@ public class AdminCoursesView extends VerticalLayout {
         dialog.open();
     }
 
+   
 
     private void openSeatsDialog(Course course) {
-
         Dialog dlg = new Dialog();
         dlg.setHeaderTitle("Curso: " + course.getName());
         dlg.setWidth("50vw");
         dlg.setHeight("50vh");
 
-        String profesor = course.getProfessor() != null
-                          ? course.getProfessor().getName()
-                          : "(sin profesor)";
+        String profesor = course.getProfessor() != null ? course.getProfessor().getName() : "(sin profesor)";
         Span profLabel = new Span("Profesor: " + profesor);
-        profLabel.getStyle().set("font-weight", "600")
-                            .set("margin-bottom", "var(--lumo-space-s)");
+        profLabel.getStyle().set("font-weight", "600").set("margin-bottom", "var(--lumo-space-s)");
 
         Grid<Seat> seatsGrid = new Grid<>(Seat.class, false);
-
-        seatsGrid.addColumn(s -> s.getStudent().getName())
-                 .setHeader("Alumno").setAutoWidth(true);
-
-        seatsGrid.addColumn(s -> s.getMark() != null ? s.getMark() : "-")
-                 .setHeader("Nota").setWidth("120px");
-
+        seatsGrid.addColumn(s -> s.getStudent().getName()).setHeader("Alumno").setAutoWidth(true);
+        seatsGrid.addColumn(s -> s.getMark() != null ? s.getMark() : "-").setHeader("Nota").setWidth("120px");
         seatsGrid.addColumn(new ComponentRenderer<>(seat -> {
-
             Icon edit = VaadinIcon.EDIT.create();
             edit.getStyle().set("cursor", "pointer");
             edit.addClickListener(e -> openEditMarkDialog(seat, seatsGrid));
 
             Icon trash = VaadinIcon.TRASH.create();
-            trash.getStyle().set("color", "var(--lumo-error-color)")
-                             .set("cursor", "pointer");
+            trash.getStyle().set("color", "var(--lumo-error-color)").set("cursor", "pointer");
             trash.addClickListener(e -> confirmDeleteSeat(seat, seatsGrid));
-
             return new HorizontalLayout(edit, trash);
         })).setHeader("Acciones").setAutoWidth(true).setFlexGrow(0);
 
         seatsGrid.setItems(seatService.findByCourseId(course.getId()));
         seatsGrid.setSizeFull();
 
-        Button editBtn  = new Button("Editar curso",
-                e -> { dlg.close(); openEditor(course); });
+        Button editBtn = new Button("Editar curso", e -> { dlg.close(); openEditor(course); });
         Button closeBtn = new Button("Cerrar", e -> dlg.close());
         HorizontalLayout footer = new HorizontalLayout(editBtn, closeBtn);
         footer.getStyle().set("margin-top", "var(--lumo-space-m)");
@@ -207,23 +191,16 @@ public class AdminCoursesView extends VerticalLayout {
         dlg.open();
     }
 
-
     private void openEditMarkDialog(Seat seat, Grid<Seat> seatsGrid) {
-
         Dialog d = new Dialog();
         d.setHeaderTitle("Modificar nota");
 
         NumberField markField = new NumberField("Nueva nota");
-        markField.setMin(0);
-        markField.setMax(10);
+        markField.setMin(0); markField.setMax(10);
         markField.setValue(seat.getMark() != null ? seat.getMark() : 0.0);
 
         DatePicker datePicker = new DatePicker("Fecha de la nota");
-        datePicker.setValue(
-            seat.getEvaluationDate() != null
-                ? seat.getEvaluationDate()
-                : LocalDate.now()
-        );
+        datePicker.setValue(seat.getEvaluationDate() != null ? seat.getEvaluationDate() : LocalDate.now());
         datePicker.setMax(LocalDate.now());
 
         Button save = new Button("Guardar", e -> {
@@ -233,45 +210,33 @@ public class AdminCoursesView extends VerticalLayout {
             seatsGrid.getDataProvider().refreshItem(seat);
             d.close();
         });
-
         Button cancel = new Button("Cancelar", e -> d.close());
 
-        d.add(new VerticalLayout(
-                markField,
-                datePicker,
-                new HorizontalLayout(save, cancel)
-        ));
+        d.add(new VerticalLayout(markField, datePicker, new HorizontalLayout(save, cancel)));
         d.open();
     }
 
+    
 
     private void confirmDeleteSeat(Seat seat, Grid<Seat> seatsGrid) {
-
         ConfirmDialog cd = new ConfirmDialog();
         cd.setHeader("Eliminar inscripción");
-        cd.setText("¿Eliminar a "
-                   + seat.getStudent().getName()
-                   + " de este curso?");
+        cd.setText("¿Eliminar a " + seat.getStudent().getName() + " de este curso?");
         cd.setCancelText("Cancelar");
         cd.setConfirmText("Eliminar");
-
         cd.addConfirmListener(e -> {
             seatService.deleteById(seat.getId());
-            seatsGrid.setItems(
-                seatService.findByCourseId(seat.getCourse().getId()));
+            seatsGrid.setItems(seatService.findByCourseId(seat.getCourse().getId()));
         });
         cd.open();
     }
 
     private void confirmDeleteCourse(Course course) {
-
         ConfirmDialog cd = new ConfirmDialog();
         cd.setHeader("Eliminar curso");
-        cd.setText("¿Estás seguro de que deseas eliminar “"
-                   + course.getName() + "”?");
+        cd.setText("¿Seguro que deseas eliminar “" + course.getName() + "”?");
         cd.setCancelText("Cancelar");
         cd.setConfirmText("Eliminar");
-
         cd.addConfirmListener(e -> {
             courseService.deleteById(course.getId());
             applyFilter(filter.getValue());
