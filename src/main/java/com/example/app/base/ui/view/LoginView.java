@@ -1,102 +1,50 @@
 package com.example.app.base.ui.view;
 
-import com.example.app.base.domain.User;
-import com.example.app.base.service.UserService;
-import com.vaadin.flow.component.Key;
-import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.notification.Notification.Position;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.PasswordField;
-import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
+import com.vaadin.flow.component.login.LoginOverlay;
+import com.example.app.security.SecurityUtils;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.RouteAlias;
-import com.vaadin.flow.server.VaadinSession;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.vaadin.flow.server.auth.AnonymousAllowed;
 
+@AnonymousAllowed
 @Route("login")
-@RouteAlias("")
-public class LoginView extends VerticalLayout {
+@PageTitle("Login")
+public class LoginView extends Div implements BeforeEnterObserver {
+  private final LoginOverlay login = new LoginOverlay();
 
-    private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
+  public LoginView() {
+    login.setAction("login");
+    login.setOpened(true);
+    login.setForgotPasswordButtonVisible(false);
+    add(login);
+  }
 
-    public LoginView(UserService userService, PasswordEncoder passwordEncoder) {
-        this.userService     = userService;
-        this.passwordEncoder = passwordEncoder;
+  @Override
+  public void beforeEnter(BeforeEnterEvent event) {
+    if (SecurityUtils.isUserLoggedIn()) {
 
-        buildUI();
+      String role = SecurityUtils.getUserRole();
+      switch (role) {
+        case "ROLE_ADMIN":
+          event.forwardTo(AdminView.class);
+          break;
+        case "ROLE_PROFESSOR":
+          event.forwardTo(ProfessorView.class);
+          break;
+        case "ROLE_STUDENT":
+          event.forwardTo(StudentView.class);
+          break;
+        default:
+          event.forwardTo(MainView.class);
+      }
+      return;
     }
-
-    private void buildUI() {
-        setSizeFull();
-        setJustifyContentMode(JustifyContentMode.CENTER);
-        setAlignItems(Alignment.CENTER);
-
-        VerticalLayout card = new VerticalLayout();
-        card.setPadding(true);
-        card.setSpacing(true);
-        card.setAlignItems(Alignment.STRETCH);
-        card.getStyle()
-            .set("background", "#eaf4ff")
-            .set("border-radius", "12px")
-            .set("box-shadow", "0 4px 12px rgba(0,0,0,0.1)")
-            .set("padding", "2rem")
-            .set("width", "360px")
-            .set("max-width", "90%");
-
-        H2 title = new H2("Log in");
-        title.getStyle().set("margin", "0").set("text-align", "center");
-        card.add(title);
-        card.setHorizontalComponentAlignment(Alignment.CENTER, title);
-
-        TextField usernameField = new TextField();
-        usernameField.setPlaceholder("Username");
-        usernameField.setPrefixComponent(new Icon(VaadinIcon.USER));
-        usernameField.setClearButtonVisible(true);
-        usernameField.setWidthFull();
-
-        PasswordField passwordField = new PasswordField();
-        passwordField.setPlaceholder("Password");
-        passwordField.setPrefixComponent(new Icon(VaadinIcon.LOCK));
-        passwordField.setRevealButtonVisible(false);
-        passwordField.setWidthFull();
-
-        Button loginBtn = new Button("Log in",
-                e -> authenticate(usernameField.getValue(), passwordField.getValue()));
-        loginBtn.addClickShortcut(Key.ENTER);
-        loginBtn.setWidthFull();
-        loginBtn.getStyle()
-                .set("background-color", "#0066ff")
-                .set("color", "white");
-
-        Anchor forgot = new Anchor("#", "Forgot password");
-        forgot.getStyle().set("font-size", "smaller");
-        card.setHorizontalComponentAlignment(Alignment.CENTER, forgot);
-
-        card.add(usernameField, passwordField, loginBtn, forgot);
-        add(card);
+    if (event.getLocation().getQueryParameters()
+              .getParameters().containsKey("error")) {
+      login.setError(true);
     }
-
-    private void authenticate(String username, String rawPass) {
-        User user = userService.findByUsername(username);
-
-        if (user != null && passwordEncoder.matches(rawPass, user.getPassword())) {
-            VaadinSession.getCurrent().setAttribute(User.class, user);
-            switch (user.getRole()) {
-                case ADMIN     -> UI.getCurrent().navigate("admin");
-                case PROFESSOR -> UI.getCurrent().navigate("professor");
-                default        -> UI.getCurrent().navigate("student");
-            }
-        } else {
-            Notification.show("Credenciales incorrectas", 3000, Position.MIDDLE);
-        }
-    }
+  }
 }
