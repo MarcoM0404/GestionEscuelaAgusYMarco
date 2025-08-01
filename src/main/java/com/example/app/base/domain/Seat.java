@@ -1,18 +1,15 @@
 package com.example.app.base.domain;
 
-import java.time.LocalDate;
+
 import jakarta.persistence.*;
+import java.time.LocalDate;
 
 @Entity
 @Table(
     name = "seats",
     uniqueConstraints = @UniqueConstraint(columnNames = { "student_id", "course_id" })
 )
-public class Seat {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Seat extends AbstractEntity {
 
     @Column(name = "exam_date", nullable = false)
     private LocalDate year;
@@ -29,9 +26,6 @@ public class Seat {
     @ManyToOne(optional = false)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
-
-
-    public Long getId() { return id; }
 
     public LocalDate getYear() { return year; }
     public void setYear(LocalDate year) { this.year = year; }
