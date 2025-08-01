@@ -2,7 +2,7 @@ package com.example.app.base.ui.view;
 
 import com.example.app.base.domain.*;
 import com.example.app.base.service.*;
-import com.vaadin.flow.component.HasSize;
+import com.example.app.security.AppRoles;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
@@ -17,14 +17,17 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.*;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.security.RolesAllowed;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
+import java.util.Optional;
 import java.util.UUID;
 
+@RolesAllowed("ADMIN")
+@PageTitle("Alumnos")
 @Route(value = "admin/students", layout = MainLayout.class)
 public class AdminStudentsView extends VerticalLayout {
 
@@ -37,8 +40,6 @@ public class AdminStudentsView extends VerticalLayout {
     private final Grid<Student> grid   = new Grid<>(Student.class, false);
     private final TextField     filter = new TextField();
 
-
-    @Autowired
     public AdminStudentsView(StudentService studentService,
                              PersonService personService,
                              AddressService addressService,
@@ -52,13 +53,19 @@ public class AdminStudentsView extends VerticalLayout {
         this.passwordEncoder = passwordEncoder;
 
         User u = VaadinSession.getCurrent().getAttribute(User.class);
-        if (u == null || u.getRole() != Role.ADMIN) {
+        if (u == null || u.getRole() != AppRoles.ADMIN) {
             UI.getCurrent().navigate("login");
             return;
         }
 
         setSizeFull();
+        buildHeader();
+        configureGrid();
+        add(grid);
+        applyFilter("");
+    }
 
+    private void buildHeader() {
         Icon titIcon = VaadinIcon.GROUP.create();
         titIcon.getStyle().set("margin-right", "4px");
         H2 titleLbl = new H2("Gestión de Alumnos");
@@ -71,24 +78,16 @@ public class AdminStudentsView extends VerticalLayout {
         filter.addValueChangeListener(e -> applyFilter(e.getValue()));
 
         Icon plus = VaadinIcon.PLUS_CIRCLE.create();
-        plus.getStyle().set("margin-right", "6px");
-        Button addBtn = new Button("Nuevo Alumno", plus,
-                e -> openEditor(new Student()));
+        Button addBtn = new Button("Nuevo Alumno", plus, e -> openEditor(new Student()));
         addBtn.setIconAfterText(false);
-        
+
         HorizontalLayout header = new HorizontalLayout(title, filter, addBtn);
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
         add(header);
-
-        configureGrid();
-        add(grid);
-        applyFilter("");
     }
 
-
     private void configureGrid() {
-
         grid.addColumn(Student::getId).setHeader("ID").setWidth("70px");
         grid.addColumn(Student::getName).setHeader("Nombre");
         grid.addColumn(Student::getEmail).setHeader("Email");
@@ -96,8 +95,7 @@ public class AdminStudentsView extends VerticalLayout {
 
         grid.addColumn(new ComponentRenderer<>(student -> {
             Icon trash = VaadinIcon.TRASH.create();
-            trash.getStyle().set("cursor", "pointer")
-                            .set("color", "var(--lumo-error-color)");
+            trash.getStyle().set("cursor", "pointer").set("color", "var(--lumo-error-color)");
             trash.addClickListener(e -> confirmDeleteStudent(student));
             return trash;
         })).setHeader("").setAutoWidth(true).setFlexGrow(0);
@@ -121,13 +119,11 @@ public class AdminStudentsView extends VerticalLayout {
 
         if (student.getAddress() == null)  student.setAddress(new Address());
         if (student.getUser()    == null)  student.setUser(new User());
-        if (student.getStudentNumber() == null)
-            student.setStudentNumber(UUID.randomUUID());
+        if (student.getStudentNumber() == null) student.setStudentNumber(UUID.randomUUID());
 
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle((student.getId() == null ? "Nuevo" : "Editar") + " alumno");
-        dialog.setWidth("50%");
-        dialog.setMaxWidth("800px");
+        dialog.setWidth("50%"); dialog.setMaxWidth("800px");
 
         Binder<Student> binder = new Binder<>(Student.class);
 
@@ -147,24 +143,13 @@ public class AdminStudentsView extends VerticalLayout {
         phone.setPrefixComponent(VaadinIcon.PHONE.create());
 
         TextField street  = new TextField("Calle");
-        street.setPrefixComponent(VaadinIcon.ROAD.create());
-
         TextField city    = new TextField("Ciudad");
-        city.setPrefixComponent(VaadinIcon.BUILDING.create());
-
         TextField state   = new TextField("Provincia");
-        state.setPrefixComponent(VaadinIcon.MAP_MARKER.create());
-
         TextField country = new TextField("País");
+        street.setPrefixComponent(VaadinIcon.ROAD.create());
+        city.setPrefixComponent(VaadinIcon.BUILDING.create());
+        state.setPrefixComponent(VaadinIcon.MAP_MARKER.create());
         country.setPrefixComponent(VaadinIcon.GLOBE_WIRE.create());
-
-        for (HasSize f : new HasSize[]{
-                email, username, password,
-                name, phone,
-                street, city, state, country
-        }) {
-            f.setWidthFull();
-        }
 
         binder.forField(name).asRequired("Requerido")
               .bind(Student::getName, Student::setName);
@@ -191,50 +176,44 @@ public class AdminStudentsView extends VerticalLayout {
             if (!binder.writeBeanIfValid(student)) return;
 
             User usr = student.getUser();
-            User existing = userService.findByUsername(usr.getUsername());
-            if (existing != null && (usr.getId() == null
-                    || !existing.getId().equals(usr.getId()))) {
-                Notification.show("El nombre de usuario ya existe, elige otro.",
+            Optional<User> existing = userService.findByUsername(usr.getUsername());
+            if (existing.isPresent() && (usr.getId() == null
+                    || !existing.get().getId().equals(usr.getId()))) {
+
+                Notification.show("El nombre de usuario ya existe...",
                                   3000, Notification.Position.MIDDLE);
                 return;
             }
 
-            usr.setRole(Role.STUDENT);
-
+            usr.setRole(AppRoles.STUDENT);
             if (!password.getValue().isBlank()) {
                 usr.setPassword(passwordEncoder.encode(password.getValue()));
             }
 
             try {
-                User savedUser = userService.save(usr);
-                student.setUser(savedUser);
+                userService.save(usr);
+                student.setUser(usr);
                 studentService.save(student);
                 applyFilter(filter.getValue());
                 dialog.close();
                 Notification.show("Alumno guardado");
             } catch (DataIntegrityViolationException ex) {
-                Notification.show("Error al guardar: "
-                        + ex.getRootCause().getMessage(),
+                Notification.show("Error al guardar: " +
+                        ex.getRootCause().getMessage(),
                         4000, Notification.Position.MIDDLE);
             }
         });
         Button cancel = new Button("Cancelar", e -> dialog.close());
 
         VerticalLayout col1 = new VerticalLayout(email, username, password);
-        col1.setPadding(false); col1.setSpacing(false);
-
         VerticalLayout col2 = new VerticalLayout(name, phone);
-        col2.setPadding(false); col2.setSpacing(false);
-
         VerticalLayout col3 = new VerticalLayout(street, city, state, country);
-        col3.setPadding(false); col3.setSpacing(false);
+        for (VerticalLayout col : new VerticalLayout[]{col1,col2,col3}) {
+            col.setPadding(false); col.setSpacing(false);
+        }
 
         HorizontalLayout columns = new HorizontalLayout(col1, col2, col3);
-        columns.setWidthFull();
-        columns.setSpacing(true);
-        columns.setPadding(false);
-        columns.setAlignItems(Alignment.START);
-        columns.setFlexGrow(1, col1, col2, col3);
+        columns.setWidthFull(); columns.setSpacing(true); columns.setPadding(false);
 
         HorizontalLayout actions = new HorizontalLayout(save, cancel);
         actions.setWidthFull();
@@ -246,14 +225,11 @@ public class AdminStudentsView extends VerticalLayout {
 
 
     private void confirmDeleteStudent(Student student) {
-
         ConfirmDialog cd = new ConfirmDialog();
         cd.setHeader("Eliminar alumno");
-        cd.setText("¿Estás seguro de que deseas eliminar a "
-                   + student.getName() + "?");
+        cd.setText("¿Seguro que deseas eliminar a " + student.getName() + "?");
         cd.setCancelText("Cancelar");
         cd.setConfirmText("Eliminar");
-
         cd.addConfirmListener(e -> {
             studentService.deleteById(student.getId());
             applyFilter(filter.getValue());
