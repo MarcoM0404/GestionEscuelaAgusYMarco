@@ -1,7 +1,10 @@
 package com.example.app.base.ui.view;
 
-import com.example.app.base.domain.*;
-import com.example.app.base.service.*;
+import com.example.app.base.domain.Administrator;
+import com.example.app.base.domain.User;
+import com.example.app.base.service.AdministratorService;
+import com.example.app.base.service.UserService;
+import com.example.app.security.AppRoles;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -16,10 +19,14 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
+import jakarta.annotation.security.RolesAllowed;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+@RolesAllowed("ADMIN")
+@PageTitle("Administradores")
 @Route(value = "admin/admins", layout = MainLayout.class)
 public class AdminAdminsView extends VerticalLayout {
 
@@ -37,14 +44,23 @@ public class AdminAdminsView extends VerticalLayout {
         this.adminService = adminService;
         this.encoder      = encoder;
 
+        
         User u = VaadinSession.getCurrent().getAttribute(User.class);
-        if (u == null || u.getRole() != Role.ADMIN) {
+        if (u == null || u.getRole() != AppRoles.ADMIN) {
             UI.getCurrent().navigate("login");
             return;
         }
 
         setSizeFull();
+        buildHeader();
+        configureGrid();
+        add(grid);
+        applyFilter("");
+    }
 
+   
+
+    private void buildHeader() {
         Icon adminIcon = VaadinIcon.USER_STAR.create();
         adminIcon.getStyle().set("margin-right", "4px");
 
@@ -55,7 +71,7 @@ public class AdminAdminsView extends VerticalLayout {
         Icon plus = VaadinIcon.PLUS_CIRCLE.create();
         Button addBtn = new Button("Nuevo Admin", plus,
                 e -> openEditor(new Administrator(), true));
-        addBtn.setIconAfterText(false); 
+        addBtn.setIconAfterText(false);
 
         filter.setPlaceholder("Buscar admin…");
         filter.setPrefixComponent(VaadinIcon.SEARCH.create());
@@ -66,20 +82,15 @@ public class AdminAdminsView extends VerticalLayout {
         header.setDefaultVerticalComponentAlignment(Alignment.CENTER);
         header.expand(title);
         add(header);
-
-        configureGrid();
-        add(grid);
-        applyFilter("");
     }
-
 
     private void configureGrid() {
         grid.addColumn(a -> a.getUser().getId())
             .setHeader("ID").setWidth("70px");
         grid.addColumn(a -> a.getUser().getUsername())
             .setHeader("Usuario").setAutoWidth(true);
-        grid.addColumn(Person::getName).setHeader("Nombre");
-        grid.addColumn(Person::getEmail).setHeader("Email");
+        grid.addColumn(Administrator::getName).setHeader("Nombre");
+        grid.addColumn(Administrator::getEmail).setHeader("Email");
 
         grid.addComponentColumn(admin -> {
             Button trash = new Button(VaadinIcon.TRASH.create(), click -> {
@@ -87,7 +98,7 @@ public class AdminAdminsView extends VerticalLayout {
                 applyFilter(filter.getValue());
                 Notification.show("Administrador eliminado");
             });
-            trash.getElement().getThemeList().add("error");
+            trash.addThemeVariants(ButtonVariant.LUMO_ERROR);
             return trash;
         }).setWidth("80px").setFlexGrow(0);
 
@@ -98,40 +109,36 @@ public class AdminAdminsView extends VerticalLayout {
     private void applyFilter(String term) {
         grid.setItems(term == null || term.isBlank()
             ? adminService.findAll()
-            : adminService.findAll().stream()
-                .filter(a -> a.getName().toLowerCase().contains(term.toLowerCase())
-                          || a.getEmail().toLowerCase().contains(term.toLowerCase())
-                          || a.getUser().getUsername().toLowerCase().contains(term.toLowerCase()))
-                .toList());
+            : adminService.search(term));
     }
 
+    
 
     private void openEditor(Administrator admin, boolean isNew) {
 
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle(null);
+        dialog.setWidth("420px");
 
         Icon starAdmin = VaadinIcon.USER_STAR.create();
         starAdmin.getStyle().set("margin-right", "6px");
-        H2 hdr   = new H2((isNew ? "Nuevo" : "Editar") + " administrador");
+        H2 hdr = new H2((isNew ? "Nuevo" : "Editar") + " administrador");
         HorizontalLayout hdrLayout = new HorizontalLayout(starAdmin, hdr);
         hdrLayout.setAlignItems(Alignment.CENTER);
         dialog.getHeader().add(hdrLayout);
 
-        dialog.setWidth("420px");
-
         Binder<Administrator> binder = new Binder<>(Administrator.class);
 
-        TextField  usern = new TextField("Usuario");
+        TextField usern = new TextField("Usuario");
         usern.setPrefixComponent(VaadinIcon.USER.create());
 
         PasswordField pass = new PasswordField("Contraseña");
         pass.setPrefixComponent(VaadinIcon.LOCK.create());
 
-        TextField  name  = new TextField("Nombre");
+        TextField name = new TextField("Nombre");
         name.setPrefixComponent(VaadinIcon.USER.create());
 
-        TextField  email = new TextField("Email");
+        TextField email = new TextField("Email");
         email.setPrefixComponent(VaadinIcon.ENVELOPE.create());
 
         binder.forField(name).asRequired().bind(Administrator::getName, Administrator::setName);
@@ -155,11 +162,14 @@ public class AdminAdminsView extends VerticalLayout {
                         usern.setErrorMessage("Usuario ya existe");
                         return;
                     }
-                    user = userService.createAdmin(
+                    user = new User(
                             usern.getValue(),
-                            pass.getValue().isBlank() ? usern.getValue() : pass.getValue(),
-                            encoder
+                            encoder.encode(pass.getValue().isBlank()
+                                           ? usern.getValue()
+                                           : pass.getValue()),
+                            AppRoles.ADMIN
                     );
+                    userService.save(user);
                     admin.setUser(user);
                 } else {
                     user = admin.getUser();
@@ -181,12 +191,7 @@ public class AdminAdminsView extends VerticalLayout {
         actions.setWidthFull();
         actions.setJustifyContentMode(JustifyContentMode.END);
 
-        dialog.add(
-            new VerticalLayout(
-                usern, pass, name, email,
-                actions
-            )
-        );
+        dialog.add(new VerticalLayout(usern, pass, name, email, actions));
         dialog.open();
     }
 }
