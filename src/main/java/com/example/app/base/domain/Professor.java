@@ -23,17 +23,9 @@ public class Professor extends Person {
         this.salary = salary;
     }
 
-    public Double getSalary() {
-        return salary;
-    }
-    public void setSalary(Double salary) {
-        this.salary = salary;
-    }
+    public Double getSalary() { return salary; }
+    public void setSalary(Double salary) { this.salary = salary; }
 
-    public List<Course> getCourses() {
-        return courses;
-    }
-    public void setCourses(List<Course> courses) {
-        this.courses = courses;
-    }
+    public List<Course> getCourses() { return courses; }
+    public void setCourses(List<Course> courses) { this.courses = courses; }
 }
