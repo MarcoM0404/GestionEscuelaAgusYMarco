@@ -5,30 +5,25 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "persons")
 @Inheritance(strategy = InheritanceType.JOINED)
-public abstract class Person {
+public abstract class Person extends AbstractEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(nullable = false)
+    private String name;
 
-    @Column(nullable = false)            private String name;
-    @Column(nullable = false, unique = true) private String email;
+    @Column(nullable = false, unique = true)
+    private String email;
+
     private String phone;
 
-    @OneToOne(fetch = FetchType.EAGER,
-              cascade = CascadeType.ALL,
-              optional = true)
+    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL, optional = true)
     @JoinColumn(name = "address_id")
     private Address address;
 
-    @OneToOne(fetch = FetchType.LAZY,
-              cascade = CascadeType.REMOVE,
-              orphanRemoval = true)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinColumn(name = "user_id")
     private User user;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
+    // Getters y setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
