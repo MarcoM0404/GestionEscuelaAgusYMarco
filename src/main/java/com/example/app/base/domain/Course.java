@@ -1,7 +1,11 @@
 package com.example.app.base.domain;
 
+
 import jakarta.persistence.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 
 @Entity
 @Table(name = "courses")
@@ -17,12 +21,14 @@ public class Course extends AbstractEntity {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Seat> seats = new ArrayList<>();
 
+    // Constructor
     public Course() {}
 
     public Course(String name, Professor professor) {
         this.name = name;
         this.professor = professor;
     }
+
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -33,6 +39,7 @@ public class Course extends AbstractEntity {
     public List<Seat> getSeats() { return seats; }
     public void setSeats(List<Seat> seats) { this.seats = seats; }
 
+    // equals and hashCode
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
