@@ -1,10 +1,10 @@
 package com.example.app.base.domain;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import jakarta.persistence.*;
 
 @Entity
 @Table(name = "students")
@@ -29,30 +29,14 @@ public class Student extends Person {
         this.avgMark = avgMark;
     }
 
-    public UUID getStudentNumber() {
-        return studentNumber;
-    }
+    public UUID getStudentNumber() { return studentNumber; }
+    public void setStudentNumber(UUID studentNumber) { this.studentNumber = studentNumber; }
 
-    public void setStudentNumber(UUID studentNumber) {
-        this.studentNumber = studentNumber;
-    }
+    public Double getAvgMark() { return avgMark; }
+    public void setAvgMark(Double avgMark) { this.avgMark = avgMark; }
 
-    public Double getAvgMark() {
-        return avgMark;
-    }
-
-    public void setAvgMark(Double avgMark) {
-        this.avgMark = avgMark;
-    }
-
-    public List<Seat> getSeats() {
-        return seats;
-    }
-
-    public void setSeats(List<Seat> seats) {
-        this.seats = seats;
-    }
-
+    public List<Seat> getSeats() { return seats; }
+    public void setSeats(List<Seat> seats) { this.seats = seats; }
 
     @Override
     public boolean equals(Object o) {
